@@ -1,0 +1,3125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <!--<script src="https://www.gstatic.com/charts/loader.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>-->
+    <link rel="stylesheet" type="text/css" media="print" href="print.css"/>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        .container-fluid {
+            height: 100%;
+            overflow-y: hidden; /* don't show content that exceeds my height */
+        }
+        .body-film {
+            min-height: 100%;
+            overflow-y: scroll;
+        }
+        .wrapper {
+            position: relative;
+            
+        }
+        .wrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .centerrr {
+            margin: auto;
+            border: 3px solid #0a1f66;
+            padding: 10px;
+          }
+
+        .btn-group-xs > .btn, .btn-xs {
+            padding: .25rem .4rem;
+            font-size: .875rem;
+            line-height: .5;
+            border-radius: .2rem;
+          }
+
+        .slidecontainer {
+            width: 100%; /* Width of the outside container */
+          }
+          
+          /* The slider itself */
+          .slider {
+            -webkit-appearance: none;  /* Override default CSS styles */
+            appearance: none;
+            width: 100%; /* Full-width */
+            height: 15px;
+            border-radius: 5px;
+            background: #d3d3d3; /* Grey background */
+            outline: none; /* Remove outline */
+            opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+            -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+            transition: opacity .2s;
+          }
+          
+          /* Mouse-over effects */
+          .slider:hover {
+            opacity: 1; /* Fully shown on mouse-over */
+          }
+          
+          /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+          .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; /* Override default look */
+            appearance: none;
+            width: 25px; /* Set a specific slider handle width */
+            height: 25px;
+            border-radius: 50%;
+            background: #04AA6D; /* Green background */
+            cursor: pointer; /* Cursor on hover */
+          }
+          
+          .slider::-moz-range-thumb {
+            width: 25px; /* Set a specific slider handle width */
+            height: 25px;
+            border-radius: 50%;
+            background: #04AA6D; /* Green background */
+            cursor: pointer; /* Cursor on hover */
+          }
+
+          .overlayDiv{
+            visibility: hidden;
+            position: absolute;
+            left: 0px;
+            top: 0px;
+            width:100%;
+            height:100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align:center;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.541);
+          }
+
+          .overlayDivChild {
+            width: 600px;
+            height: 300px;
+            margin: 0 auto;
+            background-color: #fff;
+            border:1px solid #000;
+            padding:15px;
+            position: relative;
+            text-align:center;
+         }
+
+         /* The Modal (background) */
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        padding-top: 100px; /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+    
+    /* Modal Content */
+    .modal-content {
+        position: relative;
+        background-color: #fefefe;
+        margin: auto;
+        padding: 0;
+        border: 1px solid #888;
+        width: 80%;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+        -webkit-animation-name: animatetop;
+        -webkit-animation-duration: 0.4s;
+        animation-name: animatetop;
+        animation-duration: 0.4s
+    }
+    
+    /* Add Animation */
+    @-webkit-keyframes animatetop {
+        from {top:-300px; opacity:0} 
+        to {top:0; opacity:1}
+    }
+    
+    @keyframes animatetop {
+        from {top:-300px; opacity:0}
+        to {top:0; opacity:1}
+    }
+    
+    /* The Close Button */
+    .close {
+        color: white;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    .modal-header {
+        padding: 10px 16px;
+        background-color: #5cb85c;
+        color: white;
+    }
+    
+    .modal-body {padding: 10px 16px;}
+    
+    .modal-footer {
+        padding: 10px 16px;
+        background-color: #5cb85c;
+        align-items: left;
+        color: white;
+    }
+
+    * {
+        box-sizing: border-box;
+      }
+      
+      #searchStudent {
+        width: 100%;
+        font-size: 12px;
+        padding: 8px 8px 8px 8px;
+        border: 1px solid #ddd;
+        margin-bottom: 12px;
+      }
+      
+      #specialGradeTable {
+        border-collapse: collapse;
+        width: 100%;
+        border: 1px solid #ddd;
+        font-size: 12px;
+      }
+      
+      #specialGradeTable th, #specialGradeTable td {
+        text-align: left;
+        padding: 12px;
+      }
+      
+      #specialGradeTable tr {
+        border-bottom: 1px solid #ddd;
+      }
+      
+      #specialGradeTable tr:hover {
+        background-color: #d6d6d6;
+      }
+
+      #specialGradeTable th { position: sticky; top: 0; z-index: 1; background-color: #d6d6d6; }
+
+      .selected {
+        background-color: rgb(7, 39, 145);
+        color: #FFF;
+      }
+
+    </style>
+    <script>
+        gradesDetails = JSON.parse(sessionStorage.getItem("gradeObject"));
+    </script>
+    
+    <title>BITS Pilani Grade Moderator</title>
+</head>
+
+<body onload="loadAtStart()">
+    <div id="overlaySG" class="overlayDiv">
+        <div class="overlayDivChild" style="width: 800px; height:500px">
+             <div class="container-fluid">
+                <div class="row" style="padding: 5px; height:90%">
+                    <p>Search Grade of Students</p>
+                    <input type="text" id="searchStudent" onkeyup="spgSearch()" placeholder="Search for names..">
+                    <div style="overflow-y: scroll; height:70%; width:100%; padding:0px">
+                        <table id="specialGradeTable">
+                            <tr class="header">
+                                <th style="width:20%;">ID</th>
+                                <th style="width:50%;">Name</th>
+                                <th style="width:15%;">Marks</th>
+                                <th style="width:15%;">Grade</th>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" style="padding: 5px; height:10%">
+                    <div class="col-sm-8">
+                        <p id="selectedForSpGrade"></p>
+                    </div>
+                    <div class="col-sm-2">
+                        <!-- <select id="spGradeSelector" onchange="changeHappened();" class="form-select" style="width:100%; height:100%">
+                            <option value="L">Letter</option>
+                            <option value="I">I</option>
+                            <option value="NC">NC</option>
+                            <option value="GA">GA</option>
+                            <option value="RC">RC</option>
+                            <option value="TP">TP</option>
+                            <option value="TGA">TGA</option>
+                            <option value="RRA">RRA</option>
+                        </select> -->
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="button" onclick='dismissOverlaySG()' class="btn btn-danger btn-sm" style="padding: 5px; width:100%; height:100%">I am done!</button>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+        <div id="overlayGA" class="overlayDiv">
+            <div class="overlayDivChild" style="width: 700px; height:500px">
+                 <div class="container-fluid" >
+                    <div class="row" style="padding: 5px; height:90%">
+                        <p id="gradeAnalyticsTopLabel">Grade Analytics</p>
+                        <canvas id="chartContainer" style="width: 100%; height: 90%;">
+                        </canvas>
+                    </div>
+                    <div class="row" style="padding: 5px; height:10%">
+                        <div class="col-sm-3">
+                            <div id="chartTypeSwitch" style="text-align: center; margin-top: 2px;">
+                                <button id="toggleChartButton" onclick="toggleChart()" class="btn btn-primary btn-sm" style="padding: 5px; width:100%">Show Pie Chart</button>
+                            </div>
+                        </div>
+                        <div class="col-sm-6"></div>
+                        <div class="col-sm-3">
+                            <button type="button" onclick='dismissOverlayGA()' class="btn btn-danger btn-xs" style="padding: 5px; width:100%">Okay!</button>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+        </div>
+
+   </div>
+
+   <!-- The Modal 
+    <div id="myModal" class="modal">
+
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <p id="pInMyModal"></p>
+    </div>
+  
+    </div>
+    -->
+
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="row"></div>
+            <div class="col-sm-10" style="padding-left: 30px;"><h3 id="headerMyModal"></h3></div>
+            <div class="col-sm-2"><span class="close" >X</span></div>
+          </div>
+          <div class="modal-body">
+            <p id="pInMyModal"></p>
+          </div>
+          <div class="modal-footer">
+            <h4 id="footerMyModal"></h4>
+          </div>
+        </div>
+      </div>
+
+
+    <div class="container-fluid">
+        <div class="row" style="padding: 10px; height:30%">
+            <div class="col-sm-6">
+                <div class="row" style="padding: 5px; height:25%">
+                    <h4 id="TFSubjectName">Here goes the subject code and name</h4>
+                </div>
+                <div class="row" style="padding: 5px; height:75%">
+                    
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Total Students</p>
+                        <h4 id="TFtotalStudents" style="text-align: center;">Nopes</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Students Graded</p>
+                        <h4 id="TFtotalGraded"style="text-align: center;">Nopes</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Maximum Marks</p>
+                        <h4 id="TFMaxMarks" style="text-align: center;">Nopes</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Average Marks</p>
+                        <h4 id="TFAvgMarks" style="text-align: center;">Nopes</h4>
+                    </div>
+                    <div class="col-sm-4">
+                        <h5 style="text-align: center;">MGPV</h5>
+                        <h1 id="TFMGPV" style="text-align: center; font-size: 60px;">Nopes</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6" style="height: 100%;">
+                <div class="row" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Non Letter Grades: </h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">W</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">I</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">NC</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">GA</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">RC</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">DP</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">TGA</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">RRA</h6>
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Count:</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeW" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeI" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeNC" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeGA" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeRC" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeTP" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeTGA" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id ="spGradeRRA" style="text-align: center;">0</h6>
+                    </div>
+                    
+                </div>
+                <div class="row" style="padding-top: 5px; height:8%">
+                    <div class="col-sm-4"></div>
+                    <div class="col-sm-8">
+                        <img src="imgs/separator.svg" class="mx-auto d-block" style="width:100%">
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Letter Grades: </h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">E</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">D</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">C-</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">C</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">B-</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">B</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">A-</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 style="text-align: center;">A</h6>
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">CutOff: </h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffE" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffD" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffCm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffC" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffBm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffB" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffAm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="cutOffA" style="text-align: center;">0</h6>
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Count: </h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countE" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countD" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countCm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countC" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countBm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countB" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countAm" style="text-align: center;">0</h6>
+                    </div>
+                    <div class="col-sm-1">
+                        <h6 id="countA" style="text-align: center;">0</h6>
+                    </div>
+                </div>
+                <div class="row" style="padding-top: 5px; height:8%"></div>
+                <div class="row" id="keepGradeDiv" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Keep Grades: </h6>
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb1" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb2" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb3" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb4" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb5" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb6" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb7" class="form-check-input" value="">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="checkbox" id="gcb8" class="form-check-input" value="">
+                    </div>
+                </div>
+                <div class="row" id="changeGradeDiv" style="padding-top: 5px; height:12%">
+                    <div class="col-sm-4">
+                        <h6 style="text-align: right;">Change Grades: </h6>
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb1" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb2" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb3" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb4" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb5" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb6" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb7" class="form-check-input" name="optradio">
+                    </div>
+                    <div class="col-sm-1" style="text-align: center;">
+                        <input type="radio" id="grb8" class="form-check-input" name="optradio">
+                    </div>
+                </div>
+                
+            </div>   
+        </div>
+        <div class="row wrapper" style="height:60%;" >
+            <canvas id="myChart" style="width:100%; height:100%"></canvas>
+        </div>
+        <div class="row" id="allControlsBelow" style="height:10%">
+            <div class="slidecontainer" id="divForSlide" style="padding-left: 20px; padding-right:10px; " >
+                <input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+            </div>
+            <div class="row">
+                <div class="col-sm-2">
+                    <p id="demo"></p>
+                </div>
+                <div class="col-sm-10">
+                    <div class="row">
+                        <div class="col-sm-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="modeSwitch">
+                                <label class="form-check-label" for="modeSwitch">Enable editing</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-info btn-xs" onclick='exportCSV();' style="padding: 5px; width:100%">Save ERP CSV</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-success btn-xs" onclick='exportJSON();' style="padding: 5px; width:100%">Save Grades</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-warning btn-xs" onclick="printpage();" style="padding: 5px; width:100%">Print PDF</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" onclick='overlaySG()' class="btn btn-danger btn-xs" style="padding: 5px; width:100%">Search Grades</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" onclick='overlayGA()' class="btn btn-primary btn-xs" style="padding: 5px; width:100%">Grade Analytics</button>
+                        </div>
+        
+                    </div>
+                </div>
+            </div>
+
+            
+            
+        </div>
+    </div>
+    <script>
+        //google.charts.load('current', {'packages':['bar']});
+        const myCanvas = document.getElementById("myChart");
+        var slider = document.getElementById("myRange");
+        var sliderContainer = document.getElementById("divForSlide")
+        var output = document.getElementById("demo");
+        var editSwitch = document.getElementById("modeSwitch");
+
+        var keepE = document.getElementById("gcb1");
+        var keepD = document.getElementById("gcb2");
+        var keepCm = document.getElementById("gcb3");
+        var keepC = document.getElementById("gcb4");
+        var keepBm = document.getElementById("gcb5");
+        var keepB = document.getElementById("gcb6");
+        var keepAm = document.getElementById("gcb7");
+        var keepA = document.getElementById("gcb8");
+
+        var changeE = document.getElementById("grb1");
+        var changeD = document.getElementById("grb2");
+        var changeCm = document.getElementById("grb3");
+        var changeC = document.getElementById("grb4");
+        var changeBm = document.getElementById("grb5");
+        var changeB = document.getElementById("grb6");
+        var changeAm = document.getElementById("grb7");
+        var changeA = document.getElementById("grb8");
+
+        var tfCutOffE = document.getElementById("cutOffE");
+        var tfCutOffD = document.getElementById("cutOffD");
+        var tfCutOffCm = document.getElementById("cutOffCm");
+        var tfCutOffC = document.getElementById("cutOffC");
+        var tfCutOffBm = document.getElementById("cutOffBm");
+        var tfCutOffB = document.getElementById("cutOffB");
+        var tfCutOffAm = document.getElementById("cutOffAm");
+        var tfCutOffA = document.getElementById("cutOffA");
+
+        var tfCountE = document.getElementById("countE");
+        var tfCountD = document.getElementById("countD");
+        var tfCountCm = document.getElementById("countCm");
+        var tfCountC = document.getElementById("countC");
+        var tfCountBm = document.getElementById("countBm");
+        var tfCountB = document.getElementById("countB");
+        var tfCountAm = document.getElementById("countAm");
+        var tfCountA = document.getElementById("countA");
+
+        var tfCountW = document.getElementById("spGradeW");
+        var tfCountI = document.getElementById("spGradeI");
+        var tfCountNC = document.getElementById("spGradeNC");
+        var tfCountGA = document.getElementById("spGradeGA");
+        var tfCountRC = document.getElementById("spGradeRC");
+        var tfCountTP = document.getElementById("spGradeTP");
+        var tfCountTGA = document.getElementById("spGradeTGA");
+        var tfCountRRA = document.getElementById("spGradeRRA");
+
+        var TFSubjectName = document.getElementById("TFSubjectName");
+        var TFtotalStudents = document.getElementById("TFtotalStudents");
+        var TFtotalGraded = document.getElementById("TFtotalGraded");
+        var TFAvgMarks = document.getElementById("TFAvgMarks");
+        var TFMaxMarks = document.getElementById("TFMaxMarks");
+        var TFMGPV = document.getElementById("TFMGPV");
+        //var specialGradeSelector = document.getElementById("spGradeSelector");
+
+        var changeGradeDiv = document.getElementById("changeGradeDiv");
+        var keepGradeDiv = document.getElementById("keepGradeDiv");
+
+        var specialGradeDiv = document.getElementById("overlaySG");
+        var gradeAnalyticsDiv = document.getElementById("overlayGA");
+        var modalP = document.getElementById("pInMyModal");
+        var modalHeader = document.getElementById("headerMyModal");
+        var modalFooter = document.getElementById("footerMyModal");
+
+        const gaToggleButton = document.getElementById('toggleChartButton');
+        const gaGraphCanvas = document.getElementById('chartContainer');
+        var gaTopLabel = document.getElementById('gradeAnalyticsTopLabel');
+
+        //output.innerHTML = slider.value; // Display the default slider value
+        var xvalues = [];
+        var yvalues = [];
+        var barColors = "orangered";
+        var cutoffOffsets = [];
+        var pixelOffsetsSlider = [];
+        var sliderMin = 0;
+        var sliderMax = 0;
+        var currentSelectedGrade=-1;
+        var markMap = "";
+        var spGMap = "";
+        var fullMarks = 0;
+        var retCSV = "";
+        var specialG = [];
+        var keepG = [];
+        var gCutOffs = [];
+        var averageMarks = 0;
+        var MGPV = 0;
+        var marksDistribution = [];
+        var marksForHistogram = [];
+        var gradePopulation = [0, 0, 0, 0, 0, 0, 0, 0];
+        var gradeNames = ['E', 'D', 'C-', 'C', 'B-', 'B', 'A-', 'A'];
+        var avgMarks = 0;
+        var totalStudentsGraded = 0;
+        var initialLoadingDone = false;
+        var subjectCode = "";
+        var desFileName = "";
+        var isHistogram = false;
+
+        ///as per AUGSD request
+        slider.style.visibility = 'hidden';
+        changeGradeDiv.style.visibility = 'visible';
+        keepGradeDiv.style.visibility = 'hidden';
+        editSwitch.style.visibility = 'visible'
+
+        markLowest = 10000;
+        markHighest = 0;
+
+        // Get the modal
+        var modal = document.getElementById("myModal");
+
+        // Get the <span> element that closes the modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+  
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        function spgSearch() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById("searchStudent");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("specialGradeTable");
+            tr = table.getElementsByTagName("tr");
+            for (i = 0; i < tr.length; i++) {
+              td = tr[i].getElementsByTagName("td")[0];
+              tdi = tr[i].getElementsByTagName("td")[1];
+              if (td || tdi) {
+                txtValue = td.textContent || td.innerText;
+                txtValuei = tdi.textContent || tdi.innerText;
+                if ((txtValue.toUpperCase().indexOf(filter) > -1) || (txtValuei.toUpperCase().indexOf(filter) > -1)) {
+                  tr[i].style.display = "";
+                } else {
+                  tr[i].style.display = "none";
+                }
+              }       
+            }
+          }
+
+        function showModal(clickedIdx){
+            students = marksForHistogram.at(clickedIdx).at(2);
+            modalP.innerHTML = "";
+            console.log(marksForHistogram.length);
+            for(let k=0;k<students.length;k++){
+                modalP.innerHTML += students.at(k) + "<br>";
+            }
+            modal.style.display = "block";
+            marksClicked = clickedIdx+markLowest;
+            modalHeader.innerHTML = "List of students having marks: "+ (marksClicked);
+
+            let currentGrade = 7;
+            let keepGoing = true;
+            while((keepGoing)&&(currentGrade>=0)){
+                if( (marksClicked>=gCutOffs[currentGrade]) && keepG[currentGrade]){
+                    modalFooter.innerHTML = "They currently have grade : " + gradeNames[currentGrade];
+                    keepGoing=false;
+                }
+                currentGrade--;
+            }
+
+        }
+
+        /*
+        $("#specialGradeTable").on('click', 'tr', function(){
+            //console.log("table row clicked");
+            $(this).addClass('selected').siblings().removeClass('selected');    
+            var value=$(this).find('td:first').html();
+            //alert(value);  
+            
+            var indexfoundAT = indexFromMarkMap(value);
+                    if(indexfoundAT>=0){
+                        document.getElementById("selectedForSpGrade").innerHTML = 
+                        markMap.at(indexfoundAT).at(0) + " --- " + markMap.at(indexfoundAT).at(2);
+                        specialGradeSelector.value = "L";
+                    }
+                    else{
+                        indexfoundAT = indexFromSPGMap(value);
+                        document.getElementById("selectedForSpGrade").innerHTML = 
+                        spGMap.at(indexfoundAT).at(0) + " --- " + spGMap.at(indexfoundAT).at(2);
+                        var spg = spGMap.at(indexfoundAT).at(1);
+                        specialGradeSelector.value = spg;
+                    }
+
+         });
+         */
+
+
+        function drawTable(){
+            var table = document.getElementById("specialGradeTable");
+            for(let i=0; i<markMap.length; i++){
+                let stID = markMap.at(i).at(0);
+                let stMarks = markMap.at(i).at(1);
+                let stName = markMap.at(i).at(2);
+                let stGrade = "";
+                let currentGrade = 7;
+                let keepGoing = true;
+                while((keepGoing)&&(currentGrade>=0)){
+                    if( (stMarks>=gCutOffs[currentGrade]) && keepG[currentGrade]){
+                        stGrade = gradeNames[currentGrade];
+                        keepGoing=false;
+                    }
+                    currentGrade--;
+                }
+                var row = table.insertRow(-1);
+                //row.addEventListener("click", rowClicked(stID, row.this));
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+                cell1.innerHTML = stID;
+                cell2.innerHTML = stName;
+                cell3.innerHTML = stMarks;
+                cell4.innerHTML = stGrade;
+            }
+            for(let i=0; i<spGMap.length; i++){
+                let stID = spGMap.at(i).at(0);
+                let stMarks = spGMap.at(i).at(3);
+                let stName = spGMap.at(i).at(2);
+                let stGrade = spGMap.at(i).at(1);
+                if(stGrade !== "W"){
+                    var row = table.insertRow(-1);
+                    //row.addEventListener("click", rowClicked(stID, row.this));
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+                    var cell3 = row.insertCell(2);
+                    var cell4 = row.insertCell(3);
+                    cell1.innerHTML = stID;
+                    cell2.innerHTML = stName;
+                    cell3.innerHTML = stMarks;
+                    cell4.innerHTML = stGrade;
+                }
+            }
+
+        }
+        
+
+        function overlaySG() {
+            drawTable();
+            specialGradeDiv.style.visibility = "visible";
+        }
+
+        function dismissOverlaySG() {
+            specialGradeDiv.style.visibility = "hidden";
+        }
+
+        function toggleChart() {
+            if (isHistogram) {
+                renderPieChart2();
+                gaToggleButton.textContent = 'Show Histogram';
+            } else {
+                renderHistogram2();
+                gaToggleButton.textContent = 'Show Pie Chart';
+            }
+            isHistogram = !isHistogram;
+        }
+        
+        
+        function renderHistogram2() {
+            isHistogram = true;
+            const ctx = gaGraphCanvas.getContext('2d');
+            const gradeLabels = gradeNames;
+
+            // Filter data based on keepG
+            const filteredPopulation = gradePopulation.filter((value, index) => keepG[index] !== 0);
+            const filteredGradeLabels = gradeLabels.filter((label, index) => keepG[index] !== 0);
+
+            /*
+            if (chartInstance) {
+                chartInstance.destroy();
+            }*/
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: filteredGradeLabels,
+                    datasets: [{
+                        label: 'Grade Distribution',
+                        data: filteredPopulation,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 150, 200, 0.6)',
+                            'rgba(200, 200, 200, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(199, 150, 200, 1)',
+                            'rgba(200, 200, 200, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    legend: {display: false},
+                    animation: false,
+                    events: ['click'],
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Grade Distribution Histogram',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            enabled: false, // Disable tooltips
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value;
+                                }
+                            }
+                        },
+                    }
+                }
+            });
+        }
+        
+        function renderPieChart2() {
+            const ctx = gaGraphCanvas.getContext('2d');
+            const gradeLabels = gradeNames;
+
+            // Filter data based on keepG
+            const filteredPopulation = gradePopulation.filter((value, index) => keepG[index] !== 0);
+            const filteredGradeLabels = gradeLabels.filter((label, index) => keepG[index] !== 0);
+
+            /*if (chartInstance) {
+                chartInstance.destroy();
+            }*/
+
+            chartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: filteredGradeLabels,
+                    datasets: [{
+                        label: 'Grade Distribution',
+                        data: filteredPopulation,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 150, 200, 0.6)',
+                            'rgba(200, 200, 200, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(199, 150, 200, 1)',
+                            'rgba(200, 200, 200, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    legend: {display: true},
+                    animation: false,
+                    events: ['click'],
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Grade Distribution Pie Chart',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'left',
+                            align: 'start'
+                        },
+                        tooltip: {
+                            enabled: false, // Disable tooltips
+                        }
+                    },
+
+                }
+            });
+        }
+
+
+        function overlayGA() {
+            var avgContainingGrade = ''
+            for(let i=0;i<7;i++){
+                console.log('avg marks: '+avgMarks);
+                console.log('cutoff at '+gradeNames[i]+ ' is '+gCutOffs[i+1]);
+                if((avgMarks >= gCutOffs[i]) && (avgMarks < gCutOffs[i+1]))
+                    avgContainingGrade = gradeNames[i];
+            }
+            gaTopLabel.textContent = "Grade Analytics... the average lies in grade: "+avgContainingGrade;
+
+
+            renderHistogram2()
+            gradeAnalyticsDiv.style.visibility = "visible";
+        }
+
+
+
+        function dismissOverlayGA() {
+            gradeAnalyticsDiv.style.visibility = "hidden";
+        }
+
+        function printpage() { 
+            //window.print(); 
+            var css = '@page { size: landscape; }',
+            head = document.head || document.getElementsByTagName('head')[0],
+            style = document.createElement('style');
+
+            style.type = 'text/css';
+            style.media = 'print';
+
+            if (style.styleSheet){
+                style.styleSheet.cssText = css;
+            } else {
+                style.appendChild(document.createTextNode(css));
+            }
+
+            head.appendChild(style);
+
+            window.print();
+        } 
+
+        function justLikeThat(){
+            //output.innerHTML = "logging something!";
+            console.log("logging something!");
+        }
+
+        
+        function exportCSV(){
+            //output.innerHTML = "Export csv called!";
+            console.log("export csv called");
+            erpidcol = 3;  //do not change
+            erpgradecol = 7; //do not change
+            erpmarkscol = 6; //do not change
+            erpnamecol = 4; //do not change
+            //output.innerHTML = "loop: "+retCSV.length;
+            var updatedCSV="";
+            //var tab = window.open('about:blank', '_blank');
+            //tab.document.write(arrayToCSV(retCSV)); // where 'html' is a variable containing your HTML
+            //tab.document.close(); // to finish loading the page
+            for(let i=1; i< retCSV.length; i++){
+                //output.innerHTML = "loop: "+i;
+                let idFromERP = retCSV.at(i).at(erpidcol);
+                updatedCSV += idFromERP+ " ";
+                if(typeof idFromERP !== "undefined"){
+                    var indexfoundAT = indexFromMarkMap(idFromERP);
+                    var studentM = 0;
+                    //output.innerHTML = "index found at: "+ indexfoundAT;
+                    if(indexfoundAT>=0){
+                        studentM = markMap.at(indexfoundAT).at(1);
+
+                        if( (studentM>=gCutOffs[7]) && keepG[7]){
+                            retCSV[i][erpgradecol] = "A";
+                            //retCSV.at(i).at(erpgradecol) = "A";
+                        }
+                        else if((studentM>=gCutOffs[6]) && keepG[6]){
+                            retCSV[i][erpgradecol] = "A-";
+                            //retCSV.at(i).at(erpgradecol) = "A-";
+                        }
+                        else if((studentM>=gCutOffs[5]) && keepG[5]){
+                            retCSV[i][erpgradecol] = "B";
+                            //retCSV.at(i).at(erpgradecol) = "B";
+                        }
+                        else if((studentM>=gCutOffs[4]) && keepG[4]){
+                            retCSV[i][erpgradecol] = "B-";
+                            //retCSV.at(i).at(erpgradecol) = "B-";
+                        }
+                        else if((studentM>=gCutOffs[3]) && keepG[3]){
+                            retCSV[i][erpgradecol] = "C";
+                            //retCSV.at(i).at(erpgradecol) = "C";
+                        }
+                        else if((studentM>=gCutOffs[2]) && keepG[2]){
+                            retCSV[i][erpgradecol] = "C-";
+                            //retCSV.at(i).at(erpgradecol) = "C-";
+                        }
+                        else if((studentM>=gCutOffs[1]) && keepG[1]){
+                            retCSV[i][erpgradecol] = "D";
+                            //retCSV.at(i).at(erpgradecol) = "D";
+                        }
+                        else if((studentM>=gCutOffs[0]) && keepG[0]){
+                            retCSV[i][erpgradecol] = "E";
+                            //retCSV.at(i).at(erpgradecol) = "E";
+                        }
+                        retCSV[i][erpmarkscol] = studentM;
+                    }
+                    else{
+                        indexfoundAT = indexFromSPGMap(idFromERP);
+                        console.log('The special grade ID '+idFromERP+' is found at '+indexfoundAT);
+                        if(indexfoundAT>=0){
+                            retCSV[i][erpgradecol] = spGMap.at(indexfoundAT).at(1);
+                            retCSV[i][erpmarkscol] = studentM;
+                        }
+                        else{
+                            retCSV[i][erpgradecol] = "W";
+                            retCSV[i][erpmarkscol] = studentM;
+                            alert("The "+idFromERP+" is missing in your sheet but is there in ERP CSV\nFix it manually!");
+                        }
+                    }
+                    //output.innerHTML = "loop: "+i;
+                    updatedCSV += i+" ";
+                }
+            }
+            var tab2 = window.open('about:blank', '_blank');
+            tab2.document.write((arrayToCSV(retCSV)).replace(/(?:\r\n|\r|\n)/g, '<br>')); // where 'html' is a variable containing your HTML
+            tab2.document.close(); // to finish loading the page
+
+            //const arrayToCSV = (retCSV, delimiter = ',') => arr.map(v => v.map(x => (isNaN(x) ? `"${x.replace(/"/g, '""')}"` : x)).join(delimiter)).join('\n');
+            
+
+            var toWrite = "data:text/csv;charset=utf-8," + encodeURIComponent(arrayToCSV(retCSV));
+            //console.log(toWrite);
+            var downloadAnchorNode2 = document.createElement('a');
+            downloadAnchorNode2.setAttribute("href", toWrite);
+            downloadAnchorNode2.setAttribute("download", desFileName);
+            document.body.appendChild(downloadAnchorNode2); // required for firefox
+            downloadAnchorNode2.click();
+            downloadAnchorNode2.remove();
+
+        }
+        
+
+        function exportJSON(){
+            console.log("Entered JSON function");
+            const savedDetails = {
+                code: subjectCode,
+                subjectName:  gradesDetails.subjectName, 
+                fullMarks: fullMarks, 
+                mMap: markMap,
+                retCSV: retCSV,
+                specialG: [0,0,0,0,0,0,0,0],
+                specialGMap: spGMap,
+                keepG: keepG,
+                gCutOffs: gCutOffs,
+                retCSVName: desFileName
+            };
+            toBeWritten = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedDetails));
+            var currentdate = new Date(); 
+            var datetime = "_JSON_saved_" + currentdate.getDate() + "-"
+                + (currentdate.getMonth()+1)  + "-" 
+                + currentdate.getFullYear() + "-"  
+                + currentdate.getHours() + "-"  
+                + currentdate.getMinutes() + "-" 
+                + currentdate.getSeconds();
+            jsonFileName = subjectCode + datetime;
+            var downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href",     toBeWritten);
+            downloadAnchorNode.setAttribute("download", jsonFileName + ".json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+
+        }
+
+        function indexFromMarkMap(stdID){
+            for(let i=0; i < markMap.length; i++){
+                if(markMap.at(i).at(0) === stdID){
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function indexFromSPGMap(stdID){
+            console.log('************* SPGmap Query ID is: '+stdID);
+            for(let i=0; i < spGMap.length; i++){
+                console.log('SPG map entry at '+i+' - '+spGMap.at(i).at(0));
+                if(spGMap.at(i).at(0) === stdID){
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function objToCSV(data) {
+            const csvRows = [];
+            const headers = Object.keys(data[0]);
+            //csvRows.push(headers.join(','));
+            for (const row of data) {
+                const values = headers.map(header => {
+                    const val = row[header]
+                    return val;
+                });
+                csvRows.push(values.join(','));
+            }
+            return csvRows.join('\n');
+        };
+
+        function arrayToCSV(data){
+            var retStr="";
+            for(let i=0;i<data.length;i++){
+                var row="";
+                for(let j=0;j<data.at(i).length;j++){
+                    var tempD = data.at(i).at(j);
+                    if(typeof tempD !== "undefined"){
+                        if(tempD.toString().trim().length!=0){
+                            row += tempD;
+                            if(j<(data.at(i).length-1)){
+                                row += ",";
+                            }
+                        }
+                    }
+                }
+                if(typeof row !== "undefined"){
+                    if(row.toString().trim().length!=0){
+                        retStr += row;
+                        if(i<(data.length - 1)){
+                            retStr += "\n";
+                        }
+                    }
+                }     
+            }
+            return retStr;
+        }
+
+        function testFunction(){
+            console.log("Test function called");
+        }
+
+
+
+        const verticalLinePlugin = {
+            getLinePosition: function (chart, pointIndex) {
+                const meta = chart.getDatasetMeta(0); // first dataset is used to discover X coordinate of a point
+                const data = meta.data;
+                return data[pointIndex]._model.x;
+            },
+            renderVerticalLine: function (chartInstance, pointIndex) {
+                const lineLeftOffset = this.getLinePosition(chartInstance, pointIndex);
+                const barThickness = chartInstance.getDatasetMeta(0).data[0]._model.width;
+                const scale = chartInstance.scales['y-axis-0'];
+                const context = chartInstance.chart.ctx;
+
+          
+                // render vertical line
+                context.beginPath();
+                context.lineWidth = 2;
+                context.strokeStyle = '#000088';
+                context.moveTo(lineLeftOffset - (barThickness/2), scale.top);
+                context.lineTo(lineLeftOffset - (barThickness/2), scale.bottom);
+                context.stroke();
+          
+                // write label
+                let flagText = "";
+                for(let i=0;i<8;i++){
+                    if(gCutOffs[i]==(pointIndex + markLowest)){
+                        flagText = gradeNames[i];
+                    }
+                }
+
+                const match = /(?<value>\d+\.?\d*)/;
+                //const newSize = parseFloat(context.font.match(match).groups.value + 1);
+                context.font = context.font.replace(match, 14);
+
+                context.fillStyle = "#BB0000";
+                context.textAlign = 'center';
+                
+                context.fillText(flagText, lineLeftOffset, scale.top-3);
+            },
+          
+            afterDatasetsDraw: function (chart, easing) {
+                if (chart.config.lineAtIndex) {
+                    chart.config.lineAtIndex.forEach(pointIndex => this.renderVerticalLine(chart, pointIndex));
+                }
+            }
+            };
+          
+            Chart.plugins.register(verticalLinePlugin);
+
+        function funChangeE(){
+            if(changeE.checked){
+                currentSelectedGrade = 0;
+                slider.value = gCutOffs[0]-markLowest;
+                sliderMin = markLowest-markLowest;
+                sliderMax = markHighest-markLowest;
+                let i=1;
+                let keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeE.onchange = funChangeE;
+
+        function funChangeD(){
+            if(changeD.checked){
+                currentSelectedGrade=1;
+                slider.value = gCutOffs[1]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=0;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=2;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeD.onchange = funChangeD;
+
+        function funChangeCm(){
+            if(changeCm.checked){
+                currentSelectedGrade=2;
+                slider.value = gCutOffs[2]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=1;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=3;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeCm.onchange = funChangeCm;
+
+        function funChangeC(){
+            if(changeC.checked){
+                currentSelectedGrade=3;
+                slider.value = gCutOffs[3]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=2;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=4;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeC.onchange = funChangeC;
+
+        function funChangeBm(){
+            if(changeBm.checked){
+                currentSelectedGrade=4;
+                slider.value = gCutOffs[4]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=3;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=5;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeBm.onchange = funChangeBm;
+
+        function funChangeB(){
+            if(changeB.checked){
+                currentSelectedGrade = 5;
+                slider.value = gCutOffs[5]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=4;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=6;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeB.onchange = funChangeB;
+
+        function funChangeAm(){
+            if(changeAm.checked){
+                currentSelectedGrade=6;
+                slider.value = gCutOffs[6]-markLowest;
+
+                sliderMin = markLowest-markLowest;
+                let i=5;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                i=7;
+                keepLooking=true;
+                while(keepLooking && (i<8)){
+                    if(keepG[i]){
+                        sliderMax = gCutOffs[i] - markLowest - 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i++;
+                    }
+                }
+            }
+        }
+        changeAm.onchange = funChangeAm;
+
+        function funChangeA(){
+            if(changeA.checked){
+                currentSelectedGrade=7;
+                slider.value = gCutOffs[7]-markLowest;
+                console.log('SLider value is: '+slider.value);
+
+                sliderMin = markLowest-markLowest;
+                let i=6;
+                let keepLooking=true;
+                while(keepLooking && (i>=0)){
+                    if(keepG[i]){
+                        sliderMin = gCutOffs[i] - markLowest + 1;
+                        keepLooking = false;
+                    }
+                    else{
+                        i--;
+                    }
+                }
+
+                sliderMax = markHighest-markLowest;
+                
+            }
+        }
+        changeA.onchange = funChangeA;
+
+        /*
+        function shiftJustRightGrade(gradeToShift){
+            var shiftedSuccessfully = true;
+            if(gradeToShift==7){
+                var justLeftGrade=6;
+                var keepSearching=true;
+                while(keepSearching && (justLeftGrade>=0)){
+                    if(keepG[justLeftGrade]){
+                        keepSearching=false;
+                    }
+                    else{
+                        justLeftGrade--;
+                    }
+                }
+                if(gCutOffs[justLeftGrade]<=(markHighest-2)){
+                    gCutOffs[7]=gCutOffs[justLeftGrade]+1;
+                    shiftedSuccessfully=true;
+                }
+                else{
+                    shiftedSuccessfully=false;
+                }
+            }
+            else{
+                var tempCutOff = gCutOffs[gradeToShift-1] + 1;
+                var justRightGrade=gradeToShift+1;
+                var keepLooking = true;
+                while(keepLooking && (justRightGrade<8)){
+                    if(keepG[justRightGrade]){
+                        keepLooking=false;
+                    }
+                    else{
+                        justRightGrade++;
+                    }
+                }
+                if(gCutOffs[justRightGrade]==tempCutOff){
+                    shiftedSuccessfully = shiftJustRightGrade(justRightGrade+1);
+                }
+                else{
+                    gCutOffs[gradeToShift]=tempCutOff;
+                    shiftedSuccessfully = true;
+                }
+            }
+            return shiftedSuccessfully;
+        }
+        */
+
+        function findImmediateLeft(n){
+            var toRet=n-1;
+            var keepSearching = true;
+            while(keepSearching && (toRet>=0)){
+                if(keepG[toRet]){
+                    keepSearching=false;
+                }
+                else{
+                    toRet--;
+                }
+            }
+            return toRet;
+        }
+
+        function findImmediateRight(n){
+            var toRet=n+1;
+            var keepSearching = true;
+            while(keepSearching && (toRet<=8)){
+                if(keepG[toRet]){
+                    keepSearching=false;
+                }
+                else{
+                    toRet++;
+                }
+            }
+            return toRet;
+        }
+
+        function gradeCount(){
+            var retVal=0;
+            for(let i=0;i<8;i++){
+                if(keepG[i])
+                    retVal++;
+            }
+            return retVal;
+        }
+
+        function reDrawOnGradeAlter(alteredGrade){
+            let gl = findImmediateLeft(alteredGrade);
+            let gr = findImmediateRight(alteredGrade);
+            let lb = 0;
+            let rb = 0;
+            if(gl<0){
+                lb = Math.max(0,(markLowest-5));
+                lb = markLowest;
+            }
+            if(gr>7){
+                lb = gCutOffs[gl];
+                rb = markHighest;
+            }
+            if((gl>=0)&&(gr<8)){
+                lb = gCutOffs[gl];
+                rb = gCutOffs[gr];
+            }
+
+            var refKeep;
+            var refChange;
+            if(alteredGrade==0){
+                refKeep = keepE;
+                refChange = changeE;
+            }
+            else if(alteredGrade==1){
+                refKeep = keepD;
+                refChange = changeD;
+            }
+            else if(alteredGrade==2){
+                refKeep = keepCm;
+                refChange = changeCm;
+            }
+            else if(alteredGrade==3){
+                refKeep = keepC;
+                refChange = changeC;
+            }
+            else if(alteredGrade==4){
+                refKeep = keepBm;
+                refChange = changeBm;
+            }
+            else if(alteredGrade==5){
+                refKeep = keepB;
+                refChange = changeB;
+            }
+            else if(alteredGrade==6){
+                refKeep = keepAm;
+                refChange = changeAm;
+            }
+            else if(alteredGrade==7){
+                refKeep = keepA;
+                refChange = changeA;
+            }
+
+                if(refKeep.checked){
+                    if((rb-lb)>=2){
+                        keepG[alteredGrade] = true;
+                        refChange.disabled = false;
+                        if(gl<0){
+                            gCutOffs[alteredGrade] = markLowest;
+                        }
+                        else{
+                            gCutOffs[alteredGrade] = Math.floor((rb+lb)/2);
+                        }
+                    }
+                    else{
+                        alert(" Cannot insert grade\n please make room!");
+                        refKeep.checked = false;
+                        refChange.disabled = true;
+                    }
+                }
+                else{
+                    if(gradeCount()==1){
+                        alert(" I know students don't attend classes and \n they want make-ups on make-ups \n but you have to give some grades \n to keep your job!");
+                        refKeep.checked = true;
+                        refChange.disabled = false;
+                    }else{
+                        keepG[alteredGrade] = false;
+                        refChange.disabled = true;
+                        if(gl<0){
+                            gCutOffs[gr] = markLowest;
+                        }
+                    }
+                }
+            
+            
+            
+            const canvas = document.getElementById("myChart");
+            const ctx = canvas.getContext("2d");
+
+            var tempLineIndx = [];
+            for(let i=0;i<8;i++){
+                if(keepG[i]){
+                    tempLineIndx.push(gCutOffs[i]-markLowest);
+                }
+            }
+            //document.getElementById("demo").innerHTML = "$$$ "+ (markLowest);
+
+            for(let i=0; i<8; i++){
+                gradePopulation[i]=0;
+            }
+
+            var tsg=0;
+            for(let i=0;i<markMap.length;i++){
+                if( (markMap.at(i).at(1)>=gCutOffs[7]) && keepG[7]){
+                    gradePopulation[7]++;
+                    tsg++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[6]) && keepG[6]){
+                    gradePopulation[6]++;
+                    tsg++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[5]) && keepG[5]){
+                    gradePopulation[5]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[4]) && keepG[4]){
+                    gradePopulation[4]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[3]) && keepG[3]){
+                    gradePopulation[3]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[2]) && keepG[2]){
+                    gradePopulation[2]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[1]) && keepG[1]){
+                    gradePopulation[1]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[0]) && keepG[0]){
+                    gradePopulation[0]++;
+                    tsg++;
+                }
+            }
+
+
+            if(keepG[0]){
+                tfCutOffE.innerHTML = gCutOffs[0];
+                tfCountE.innerHTML = gradePopulation[0];
+            }
+            else{
+                tfCutOffE.innerHTML = 'X';
+                tfCountE.innerHTML = 'X';
+            }
+
+            if(keepG[1]){
+                tfCutOffD.innerHTML = gCutOffs[1];
+                tfCountD.innerHTML = gradePopulation[1];
+            }
+            else{
+                tfCutOffD.innerHTML = 'X';
+                tfCountD.innerHTML = 'X';
+            }
+
+            if(keepG[2]){
+                tfCutOffCm.innerHTML = gCutOffs[2];
+                tfCountCm.innerHTML = gradePopulation[2];
+            }
+            else{
+                tfCutOffCm.innerHTML = 'X';
+                tfCountCm.innerHTML = 'X';
+            }
+
+            if(keepG[3]){
+                tfCutOffC.innerHTML = gCutOffs[3];
+                tfCountC.innerHTML = gradePopulation[3];
+            }
+            else{
+                tfCutOffC.innerHTML = 'X';
+                tfCountC.innerHTML = 'X';
+            }
+
+            if(keepG[4]){
+                tfCutOffBm.innerHTML = gCutOffs[4];
+                tfCountBm.innerHTML = gradePopulation[4];
+            }
+            else{
+                tfCutOffBm.innerHTML = 'X';
+                tfCountBm.innerHTML = 'X';
+            }
+
+            if(keepG[5]){
+                tfCutOffB.innerHTML = gCutOffs[5];
+                tfCountB.innerHTML = gradePopulation[5];
+            }
+            else{
+                tfCutOffB.innerHTML = 'X';
+                tfCountB.innerHTML = 'X';
+            }
+
+            if(keepG[6]){
+                tfCutOffAm.innerHTML = gCutOffs[6];
+                tfCountAm.innerHTML = gradePopulation[6];
+            }
+            else{
+                tfCutOffAm.innerHTML = 'X';
+                tfCountAm.innerHTML = 'X';
+            }
+
+            if(keepG[7]){
+                tfCutOffA.innerHTML = gCutOffs[7];
+                tfCountA.innerHTML = gradePopulation[7];
+            }
+            else{
+                tfCutOffA.innerHTML = 'X';
+                tfCountA.innerHTML = 'X';
+            }
+
+
+            calculateMGPV();
+            TFMGPV.innerHTML = (Math.round(MGPV * 100) / 100).toFixed(2);
+            totalStudentsGraded = tsg;
+            TFtotalGraded.innerHTML = totalStudentsGraded;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: xvalues,
+                    datasets: [{
+                      backgroundColor: barColors,
+                      data: yvalues
+                    }]
+                  },
+                label: 'Progress',
+                options: {
+                    legend: {display: false},
+                    events: ['click'],
+                    animation: false,
+                    plugins: {
+                        tooltip: {
+                          enabled: false, // Disable tooltips
+                        }
+                      },
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    scales: {
+                      yAxes: [{
+                        ticks: {
+                          beginAtZero: true
+                        }
+                      }],
+                    }
+                },
+                lineAtIndex: tempLineIndx,
+            })
+        }
+
+
+        /*
+        function reDrawOnGradeAlter(alteredGrade){
+            if(alteredGrade==0){
+                if(keepE.checked){
+                    var justRightGrade=1;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[0] = true;
+                        gCutOffs[0] = markLowest;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[0] = false;
+                    var currentCutOff = gCutOffs[0];
+                    var justRightGrade=1;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    gCutOffs[justRightGrade]=currentCutOff;
+                }
+            }
+            else if(alteredGrade==1){
+                if(keepD.checked){
+                    var justRightGrade=2;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[1] = true;
+                        var justLeftGrade=0;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[1] = markLowest;
+                        else
+                            gCutOffs[1] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[1] = false;
+                    var currentCutOff = gCutOffs[1];
+                    var justRightGrade=2;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=0;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==2){
+                if(keepCm.checked){
+                    var justRightGrade=3;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[1] = true;
+                        var justLeftGrade=0;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[2] = markLowest;
+                        else
+                            gCutOffs[2] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[2] = false;
+                    var currentCutOff = gCutOffs[2];
+                    var justRightGrade=3;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=1;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==3){
+                if(keepC.checked){
+                    var justRightGrade=4;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[3] = true;
+                        var justLeftGrade=2;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[3] = markLowest;
+                        else
+                            gCutOffs[3] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[3] = false;
+                    var currentCutOff = gCutOffs[3];
+                    var justRightGrade=4;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=2;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==4){
+                if(keepBm.checked){
+                    var justRightGrade=5;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[4] = true;
+                        var justLeftGrade=3;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[4] = markLowest;
+                        else
+                            gCutOffs[4] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[4] = false;
+                    var currentCutOff = gCutOffs[4];
+                    var justRightGrade=5;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=3;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==5){
+                if(keepB.checked){
+                    var justRightGrade=6;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[5] = true;
+                        var justLeftGrade=4;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[5] = markLowest;
+                        else
+                            gCutOffs[5] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[5] = false;
+                    var currentCutOff = gCutOffs[5];
+                    var justRightGrade=6;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=4;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==6){
+                if(keepAm.checked){
+                    var justRightGrade=7;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    if(shiftJustRightGrade(justRightGrade)){
+                        keepG[6] = true;
+                        var justLeftGrade=0;
+                        var keepSearching = true;
+                        while(keepSearching && (justLeftGrade>=0)){
+                            if(keepG[justLeftGrade]){
+                                keepSearching=false;
+                            }
+                            else{
+                                justLeftGrade--;
+                            }
+                        }
+                        if(justLeftGrade<0)
+                            gCutOffs[6] = markLowest;
+                        else
+                            gCutOffs[6] = gCutOffs[justLeftGrade]+1;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    keepG[6] = false;
+                    var currentCutOff = gCutOffs[6];
+                    var justRightGrade=7;
+                    var keepLooking = true;
+                    while(keepLooking && (justRightGrade<8)){
+                        if(keepG[justRightGrade]){
+                            keepLooking=false;
+                        }
+                        else{
+                            justRightGrade++;
+                        }
+                    }
+                    var justLeftGrade=5;
+                    var keepSearching = true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                     }
+                    if(justLeftGrade<0)
+                        gCutOffs[justRightGrade]=markLowest;
+                }
+            }
+            else if(alteredGrade==7){
+                if(keepA.checked){
+                    var justLeftGrade=6;
+                    var keepSearching=true;
+                    while(keepSearching && (justLeftGrade>=0)){
+                        if(keepG[justLeftGrade]){
+                            keepSearching=false;
+                        }
+                        else{
+                            justLeftGrade--;
+                        }
+                    }
+                    if(gCutOffs[justLeftGrade]<=(markHighest-2)){
+                        gCutOffs[7]=gCutOffs[justLeftGrade]+1;
+                        shiftedSuccessfully=true;
+                    }
+                    else{
+                        alert("Cannot insert this grade, please make room!");
+                    }
+                }
+                else{
+                    var numOfGrades=0;
+                    for(let i=0;i<8;i++){
+                        if(keepG[i])
+                            numOfGrades++;
+                    }
+                    if(numOfGrades==1){
+                        alert("I know students don't attend classes and \n they want make-ups on make-ups \n but you have to give some grades \n to keep your job!");
+                    }
+                    else{
+                        keepG[7]=false;
+                    }
+                }
+            }
+
+            const canvas = document.getElementById("myChart");
+            const ctx = canvas.getContext("2d");
+
+            var tempLineIndx = [];
+            for(let i=0;i<8;i++){
+                if(keepG[i]){
+                    tempLineIndx.push(gCutOffs[i]-markLowest);
+                }
+            }
+            //document.getElementById("demo").innerHTML = "$$$ "+ (markLowest);
+
+            for(let i=0; i<8; i++){
+                gradePopulation[i]=0;
+            }
+
+            for(let i=0;i<markMap.length;i++){
+                if( (markMap.at(i).at(1)>=gCutOffs[7]) && keepG[7]){
+                    gradePopulation[7]++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[6]) && keepG[6]){
+                    gradePopulation[6]++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[5]) && keepG[5]){
+                    gradePopulation[5]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[4]) && keepG[4]){
+                    gradePopulation[4]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[3]) && keepG[3]){
+                    gradePopulation[3]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[2]) && keepG[2]){
+                    gradePopulation[2]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[1]) && keepG[1]){
+                    gradePopulation[1]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[0]) && keepG[0]){
+                    gradePopulation[0]++;
+                }
+            }
+
+
+            if(keepG[0]){
+                tfCutOffE.innerHTML = gCutOffs[0];
+                tfCountE.innerHTML = gradePopulation[0];
+            }
+            else{
+                tfCutOffE.innerHTML = 'X';
+                tfCountE.innerHTML = 'X';
+            }
+
+            if(keepG[1]){
+                tfCutOffD.innerHTML = gCutOffs[1];
+                tfCountD.innerHTML = gradePopulation[1];
+            }
+            else{
+                tfCutOffD.innerHTML = 'X';
+                tfCountD.innerHTML = 'X';
+            }
+
+            if(keepG[2]){
+                tfCutOffCm.innerHTML = gCutOffs[2];
+                tfCountCm.innerHTML = gradePopulation[2];
+            }
+            else{
+                tfCutOffCm.innerHTML = 'X';
+                tfCountCm.innerHTML = 'X';
+            }
+
+            if(keepG[3]){
+                tfCutOffC.innerHTML = gCutOffs[3];
+                tfCountC.innerHTML = gradePopulation[3];
+            }
+            else{
+                tfCutOffC.innerHTML = 'X';
+                tfCountC.innerHTML = 'X';
+            }
+
+            if(keepG[4]){
+                tfCutOffBm.innerHTML = gCutOffs[4];
+                tfCountBm.innerHTML = gradePopulation[4];
+            }
+            else{
+                tfCutOffBm.innerHTML = 'X';
+                tfCountBm.innerHTML = 'X';
+            }
+
+            if(keepG[5]){
+                tfCutOffB.innerHTML = gCutOffs[5];
+                tfCountB.innerHTML = gradePopulation[5];
+            }
+            else{
+                tfCutOffB.innerHTML = 'X';
+                tfCountB.innerHTML = 'X';
+            }
+
+            if(keepG[6]){
+                tfCutOffAm.innerHTML = gCutOffs[6];
+                tfCountAm.innerHTML = gradePopulation[6];
+            }
+            else{
+                tfCutOffAm.innerHTML = 'X';
+                tfCountAm.innerHTML = 'X';
+            }
+
+            if(keepG[7]){
+                tfCutOffA.innerHTML = gCutOffs[7];
+                tfCountA.innerHTML = gradePopulation[7];
+            }
+            else{
+                tfCutOffA.innerHTML = 'X';
+                tfCountA.innerHTML = 'X';
+            }
+
+
+            calculateMGPV();
+            TFMGPV.innerHTML = (Math.round(MGPV * 100) / 100).toFixed(2);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: xvalues,
+                    datasets: [{
+                      backgroundColor: barColors,
+                      data: yvalues
+                    }]
+                  },
+                label: 'Progress',
+                options: {
+                    legend: {display: false},
+                    events: [],
+                    animation: false,
+                    plugins: {
+                        tooltip: {
+                          enabled: false, // Disable tooltips
+                        }
+                      },
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    scales: {
+                      yAxes: [{
+                        ticks: {
+                          beginAtZero: true
+                        }
+                      }],
+                    }
+                },
+                lineAtIndex: tempLineIndx,
+            })
+
+        }
+        */
+        keepE.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(0);
+            }
+        }
+
+        keepD.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(1);
+            }
+        }
+
+        keepCm.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(2);
+            }
+        }
+
+        keepC.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(3);
+            }
+        }
+
+        keepBm.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(4);
+            }
+        }
+
+        keepB.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(5);
+            }
+        }
+
+        keepAm.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(6);
+            }
+        }
+
+        keepA.onchange = function(){
+            if(initialLoadingDone){
+                reDrawOnGradeAlter(7);
+            }
+        }
+
+        // Update the current slider value (each time you drag the slider handle)
+        slider.oninput = function() {
+            
+            const canvas = document.getElementById("myChart");
+            const ctx = canvas.getContext("2d");
+
+            if(parseInt(this.value)<=sliderMin)
+                slider.value=sliderMin;
+            else if(parseInt(this.value)>=sliderMax)
+                slider.value=sliderMax;
+
+            gCutOffs[currentSelectedGrade] = parseInt(slider.value)+markLowest;
+
+            var tempLineIndx = [];
+            for(let i=0;i<8;i++){
+                if(keepG[i]){
+                    tempLineIndx.push(gCutOffs[i]-markLowest);
+                }
+            }
+            //document.getElementById("demo").innerHTML = "$$$ "+ (markLowest);
+
+            for(let i=0; i<8; i++){
+                gradePopulation[i]=0;
+            }
+
+            var tsg = 0;
+            for(let i=0;i<markMap.length;i++){
+                if( (markMap.at(i).at(1)>=gCutOffs[7]) && keepG[7]){
+                    gradePopulation[7]++;
+                    tsg++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[6]) && keepG[6]){
+                    gradePopulation[6]++;
+                    tsg++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[5]) && keepG[5]){
+                    gradePopulation[5]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[4]) && keepG[4]){
+                    gradePopulation[4]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[3]) && keepG[3]){
+                    gradePopulation[3]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[2]) && keepG[2]){
+                    gradePopulation[2]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[1]) && keepG[1]){
+                    gradePopulation[1]++;
+                    tsg++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[0]) && keepG[0]){
+                    gradePopulation[0]++;
+                    tsg++;
+                }
+            }
+
+
+            if(keepG[0]){
+                tfCutOffE.innerHTML = gCutOffs[0];
+                tfCountE.innerHTML = gradePopulation[0];
+            }
+            else{
+                tfCutOffE.innerHTML = 'X';
+                tfCountE.innerHTML = 'X';
+            }
+
+            if(keepG[1]){
+                tfCutOffD.innerHTML = gCutOffs[1];
+                tfCountD.innerHTML = gradePopulation[1];
+            }
+            else{
+                tfCutOffD.innerHTML = 'X';
+                tfCountD.innerHTML = 'X';
+            }
+
+            if(keepG[2]){
+                tfCutOffCm.innerHTML = gCutOffs[2];
+                tfCountCm.innerHTML = gradePopulation[2];
+            }
+            else{
+                tfCutOffCm.innerHTML = 'X';
+                tfCountCm.innerHTML = 'X';
+            }
+
+            if(keepG[3]){
+                tfCutOffC.innerHTML = gCutOffs[3];
+                tfCountC.innerHTML = gradePopulation[3];
+            }
+            else{
+                tfCutOffC.innerHTML = 'X';
+                tfCountC.innerHTML = 'X';
+            }
+
+            if(keepG[4]){
+                tfCutOffBm.innerHTML = gCutOffs[4];
+                tfCountBm.innerHTML = gradePopulation[4];
+            }
+            else{
+                tfCutOffBm.innerHTML = 'X';
+                tfCountBm.innerHTML = 'X';
+            }
+
+            if(keepG[5]){
+                tfCutOffB.innerHTML = gCutOffs[5];
+                tfCountB.innerHTML = gradePopulation[5];
+            }
+            else{
+                tfCutOffB.innerHTML = 'X';
+                tfCountB.innerHTML = 'X';
+            }
+
+            if(keepG[6]){
+                tfCutOffAm.innerHTML = gCutOffs[6];
+                tfCountAm.innerHTML = gradePopulation[6];
+            }
+            else{
+                tfCutOffAm.innerHTML = 'X';
+                tfCountAm.innerHTML = 'X';
+            }
+
+            if(keepG[7]){
+                tfCutOffA.innerHTML = gCutOffs[7];
+                tfCountA.innerHTML = gradePopulation[7];
+            }
+            else{
+                tfCutOffA.innerHTML = 'X';
+                tfCountA.innerHTML = 'X';
+            }
+
+
+            calculateMGPV();
+            TFMGPV.innerHTML = (Math.round(MGPV * 100) / 100).toFixed(2);
+            totalStudentsGraded = tsg;
+            TFtotalGraded.innerHTML = totalStudentsGraded;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: xvalues,
+                    datasets: [{
+                      backgroundColor: barColors,
+                      data: yvalues
+                    }]
+                  },
+                label: 'Progress',
+                options: {
+                    legend: {display: false},
+                    animation: false,
+                    events: ['click'],
+                    plugins: {
+                        tooltip: {
+                          enabled: false, // Disable tooltips
+                        }
+                      },
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    scales: {
+                      yAxes: [{
+                        ticks: {
+                          beginAtZero: true
+                        }
+                      }],
+                    }
+                },
+                lineAtIndex: tempLineIndx,
+            })
+        }
+
+        editSwitch.onchange = function(){
+            if(this.checked){
+                slider.style.visibility = 'visible';
+                changeGradeDiv.style.visibility = 'visible';
+                keepGradeDiv.style.visibility = 'hidden';
+                let tempSelectedGrade = 7;
+                let keepscanning = true;
+                while(keepscanning && (tempSelectedGrade>0)){
+                    if(keepG[tempSelectedGrade]){
+                        currentSelectedGrade = tempSelectedGrade;
+                        slider.value = gCutOffs[currentSelectedGrade] - markLowest;
+                        if(tempSelectedGrade==7){
+                            changeA.checked=true;
+                            funChangeA();
+                        }
+                        else if(tempSelectedGrade==6){
+                            changeAm.checked=true;
+                            funChangeAm();
+                        }
+                        else if(tempSelectedGrade==5){
+                            changeB.checked=true;
+                            funChangeB();
+                        }
+                        else if(tempSelectedGrade==4){
+                            changeBm.checked=true;
+                            funChangeBm();
+                        }
+                        else if(tempSelectedGrade==3){
+                            changeC.checked=true;
+                            funChangeC();
+                        }
+                        else if(tempSelectedGrade==2){
+                            changeCm.checked=true;
+                            funChangeCm();
+                        }
+                        else if(tempSelectedGrade==1){
+                            changeD.checked=true;
+                            funChangeD();
+                        }
+                        else{
+                            changeE.checked=true;
+                            funChangeE();
+                        }
+
+                        keepscanning = false;
+                    }
+                    else{
+                        currentSelectedGrade--;
+                    }
+                }
+
+            }
+            else{
+                slider.style.visibility = 'hidden';
+                //changeGradeDiv.style.visibility = 'hidden';
+                //keepGradeDiv.style.visibility = 'visible';
+            }
+        }
+        
+        function calculateMGPV(){
+            MGPV=0;
+            let tsgTemp=0;
+            for(let i=1;i<8;i++){
+                if(keepG[i]){
+                    MGPV += gradePopulation[i]*(i+3);
+                    tsgTemp += gradePopulation[i];
+                }
+            }
+            if (keepG[0]) {
+            MGPV += gradePopulation[0]*(2);
+                tsgTemp += gradePopulation[0];
+            }
+            MGPV = MGPV/tsgTemp;
+        }
+
+        function loadAtStart(){
+            subjectCode = gradesDetails.code;
+            markMap = gradesDetails.mMap;
+            fullMarks = gradesDetails.fullMarks;
+            retCSV = gradesDetails.retCSV;
+            specialG = gradesDetails.specialG;
+            spGMap = gradesDetails.specialGMap;
+            keepG = gradesDetails.keepG;
+            gCutOffs = gradesDetails.gCutOffs;
+            desFileName = gradesDetails.retCSVName;
+
+            document.title = subjectCode + "_histogram";
+
+            TFSubjectName.innerHTML = subjectCode + " " + gradesDetails.subjectName;
+            TFMaxMarks.innerHTML = fullMarks;
+
+
+            for(let i=0;i<markMap.length;i++){
+                if(markLowest>markMap.at(i).at(1))
+                    markLowest=markMap.at(i).at(1);
+                if(markHighest<markMap.at(i).at(1))
+                    markHighest=markMap.at(i).at(1);
+            }
+
+            ///change suggested by AUGSD
+            markLowest = Math.max(0,(markLowest-5));
+            markHighest = Math.min(fullMarks,(markHighest+5));
+
+            if(gCutOffs.length==0){
+                initialDivisions =  parseInt(((markHighest - markLowest)/8), 10) ;
+                for(let i=0;i<8;i++){
+                    gCutOffs[i] = markLowest + i*initialDivisions;
+                }
+            }
+
+            slider.min=0;
+            slider.max=markHighest-markLowest;
+
+            avgMarks = 0;
+            var totalStudentsGraded = 0;
+
+            marksDistribution = new Array(fullMarks+1);
+            for(let i=0;i<=fullMarks;i++){
+                marksDistribution[i]=0;
+            }
+
+            tsgTemp=0;
+            
+            for(let i=0;i<markMap.length;i++){
+                marksDistribution[markMap.at(i).at(1)]++;
+                avgMarks += markMap.at(i).at(1);
+                tsgTemp++;
+            }
+            totalStudentsGraded = tsgTemp;
+            console.log('total students graded: ' + totalStudentsGraded);
+
+            for(let i=0;i<markMap.length;i++){
+                if( (markMap.at(i).at(1)>=gCutOffs[7]) && keepG[7]){
+                    gradePopulation[7]++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[6]) && keepG[6]){
+                    gradePopulation[6]++;
+                }
+                else if( (markMap.at(i).at(1)>=gCutOffs[5]) && keepG[5]){
+                    gradePopulation[5]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[4]) && keepG[4]){
+                    gradePopulation[4]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[3]) && keepG[3]){
+                    gradePopulation[3]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[2]) && keepG[2]){
+                    gradePopulation[2]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[1]) && keepG[1]){
+                    gradePopulation[1]++;
+                }
+                else if((markMap.at(i).at(1)>=gCutOffs[0]) && keepG[0]){
+                    gradePopulation[0]++;
+                }
+            }
+
+            for(let i=0; i<spGMap.length; i++){
+                if(spGMap.at(i).at(1) === "W"){
+                    specialG[0]++;
+                }
+                else if(spGMap.at(i).at(1) === "I"){
+                    specialG[1]++;
+                }
+                else if(spGMap.at(i).at(1) === "NC"){
+                    specialG[2]++;
+                }
+                else if(spGMap.at(i).at(1) === "GA"){
+                    specialG[3]++;
+                }
+                else if(spGMap.at(i).at(1) === "RC"){
+                    specialG[4]++;
+                }
+                else if(spGMap.at(i).at(1) === "DP"){
+                    specialG[5]++;
+                }
+                else if(spGMap.at(i).at(1) === "TGA"){
+                    specialG[6]++;
+                }
+                else if(spGMap.at(i).at(1) === "RRA"){
+                    specialG[7]++;
+                }
+            }
+
+            tfCountW.innerHTML = specialG[0];
+            tfCountI.innerHTML = specialG[1];
+            tfCountNC.innerHTML = specialG[2];
+            tfCountGA.innerHTML = specialG[3];
+            tfCountRC.innerHTML = specialG[4];
+            tfCountTP.innerHTML = specialG[5];
+            tfCountTGA.innerHTML = specialG[6];
+            tfCountRRA.innerHTML = specialG[7];
+
+            var totalSpecialGrades=0;
+            for(let i=0;i<8;i++){
+                totalSpecialGrades += specialG[i];
+            }
+
+
+            avgMarks = avgMarks/totalStudentsGraded;
+            TFAvgMarks.innerHTML = (Math.round(avgMarks * 100) / 100).toFixed(2);
+            TFtotalGraded.innerHTML = totalStudentsGraded;
+            TFtotalStudents.innerHTML = totalSpecialGrades + totalStudentsGraded;   //retCSV.length - 1;
+
+            
+            for(let i=markLowest;i<=markHighest;i++){
+                var students = [];
+                for(let j=0;j<markMap.length;j++){
+                    if(i==markMap.at(j).at(1)){
+                        students.push(markMap.at(j).at(0)+' : '+markMap.at(j).at(2));
+                    }
+                }
+                //marksForHistogram.push([(''+i),marksDistribution[i]]);
+                marksForHistogram.push([(''+i),students.length, students]);
+                console.log('i: ' + i + ' students: ' + students.length);
+            }
+
+            if(keepG[0]){
+                tfCutOffE.innerHTML = gCutOffs[0];
+                tfCountE.innerHTML = gradePopulation[0];
+                keepE.checked = true;
+            }
+            else{
+                tfCutOffE.innerHTML = 'X';
+                tfCountE.innerHTML = 'X';
+            }
+
+            if(keepG[1]){
+                tfCutOffD.innerHTML = gCutOffs[1];
+                tfCountD.innerHTML = gradePopulation[1];
+                keepD.checked = true;
+            }
+            else{
+                tfCutOffD.innerHTML = 'X';
+                tfCountD.innerHTML = 'X';
+            }
+
+            if(keepG[2]){
+                tfCutOffCm.innerHTML = gCutOffs[2];
+                tfCountCm.innerHTML = gradePopulation[2];
+                keepCm.checked = true;
+            }
+            else{
+                tfCutOffCm.innerHTML = 'X';
+                tfCountCm.innerHTML = 'X';
+            }
+
+            if(keepG[3]){
+                tfCutOffC.innerHTML = gCutOffs[3];
+                tfCountC.innerHTML = gradePopulation[3];
+                keepC.checked = true;
+            }
+            else{
+                tfCutOffC.innerHTML = 'X';
+                tfCountC.innerHTML = 'X';
+            }
+
+            if(keepG[4]){
+                tfCutOffBm.innerHTML = gCutOffs[4];
+                tfCountBm.innerHTML = gradePopulation[4];
+                keepBm.checked = true;
+            }
+            else{
+                tfCutOffBm.innerHTML = 'X';
+                tfCountBm.innerHTML = 'X';
+            }
+
+            if(keepG[5]){
+                tfCutOffB.innerHTML = gCutOffs[5];
+                tfCountB.innerHTML = gradePopulation[5];
+                keepB.checked = true;
+            }
+            else{
+                tfCutOffB.innerHTML = 'X';
+                tfCountB.innerHTML = 'X';
+            }
+
+            if(keepG[6]){
+                tfCutOffAm.innerHTML = gCutOffs[6];
+                tfCountAm.innerHTML = gradePopulation[6];
+                keepAm.checked = true;
+            }
+            else{
+                tfCutOffAm.innerHTML = 'X';
+                tfCountAm.innerHTML = 'X';
+            }
+
+            if(keepG[7]){
+                tfCutOffA.innerHTML = gCutOffs[7];
+                tfCountA.innerHTML = gradePopulation[7];
+                keepA.checked = true;
+            }
+            else{
+                tfCutOffA.innerHTML = 'X';
+                tfCountA.innerHTML = 'X';
+            }
+
+            //document.getElementById("demo").innerHTML = "*** "+totalStudentsGraded;
+
+            calculateMGPV();
+            TFMGPV.innerHTML = (Math.round(MGPV * 100) / 100).toFixed(2);
+
+            ///as suggested by AUGSD, uncomment to go to old version
+            
+            slider.style.visibility = 'hidden';
+            changeGradeDiv.style.visibility = 'visible';
+            
+            ///and comment this part
+            /*
+            currentSelectedGrade = 7;
+            slider.value = gCutOffs[currentSelectedGrade] - markLowest;
+            changeA.checked = true
+            */
+
+
+
+            
+            drawHist.apply(this, marksForHistogram);
+            console.log('total students graded: ' + totalStudentsGraded);
+            initialLoadingDone = true;
+        } 
+
+        function drawHist(...mfh){
+            //document.getElementById("demo").innerHTML = "total width of hist: " + mfh.length;
+            var ctx = myCanvas.getContext("2d");
+            for(let i=0;i<mfh.length;i++){
+                xvalues.push(mfh.at(i).at(0));
+                yvalues.push(mfh.at(i).at(1));
+            }
+
+            var tempLineIndx = [];
+            for(let i=0;i<8;i++){
+                if(keepG[i]){
+                    tempLineIndx.push(gCutOffs[i]-markLowest);
+                }
+            }
+            
+            const chartOnStart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: xvalues,
+                    datasets: [{
+                      backgroundColor: barColors,
+                      data: yvalues
+                    }]
+                  },
+                label: 'Progress',
+                options: {
+                    legend: {display: false},
+                    animation: false,
+                    events: ['click'],
+                    plugins: {
+                        tooltip: {
+                          enabled: false, // Disable tooltips
+                        }
+                      },
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
+                    scales: {
+                      yAxes: [{
+                        ticks: {
+                          beginAtZero: true
+                        }
+                      }],
+                    }
+                },
+                lineAtIndex: tempLineIndx,
+            });
+
+            myCanvas.onclick = (evt) => {
+                const res = chartOnStart.getElementsAtEventForMode(
+                  evt,
+                  'nearest',
+                  { intersect: true },
+                  true
+                );
+                // If didn't click on a bar, `res` will be an empty array
+                if (res.length === 0) {
+                  return;
+                }
+                // Alerts "You clicked on A" if you click the "A" chart
+                //alert('You clicked on ' + res[0]._index);
+                showModal(res[0]._index);
+              };
+
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    <title>BITS Pilani Grade Moderator</title>
+</head>
+
+<body onload="defaultState()">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+                <div style="padding-top:15px; padding-bottom:15px;">
+                    <h1>Create New Grades</h1> 
+                    <p>Choose the csv file you have saved and the one downloaded from the ERP, choose the ID and marks columns and the starting row (usually 2)</p> 
+                </div>
+                <img src="imgs/separator.svg" class="mx-auto d-block" style="width:100%">
+                <div style="padding-top: 15px;">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>Enter Subject Name: </p>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="subjectName" onKeyPress="checkSubjectName();" onkeyup="checkSubjectName();" placeholder="Subject name only (without subject code)" required>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding-top: 15px;">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>Enter Maximum Marks: </p>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks" placeholder="Integer input only, minimum value 0" required>
+                            <script>
+                                jQuery(function($) {
+                                    //$('#subjectMarks').on('input', checkSubjectMarks());
+                                    $('#subjectMarks').bind('keyup mouseup', function () {
+                                        checkSubjectMarks();            
+                                    });
+                                  });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding-top: 15px;">
+                    <form id="formSRC">
+                        <input type="file" id="UploadSRCFile" accept=".csv" style="width: 79.5%;"/>
+                        <input type="submit" class="btn btn-primary" name="submit" style="width: 20%;"/>
+                    </form>
+                </div>
+                <div style="padding-top: 15px;">
+                    <select id="idSelector" onchange="chooseIDCol();" class="form-select">
+                        <option hidden >Choose ID column</option>
+                    </select>
+                </div>
+                <div style="padding-top: 15px;">
+                    <select id="marksSelector" onchange="chooseMarkCol();" class="form-select">
+                        <option hidden >Choose marks column</option>
+                    </select>
+                </div>
+                <div style="padding-top: 15px;">
+                    <select id="startSelector" onchange="chooseStartRow();" class="form-select">
+                        <option hidden >Starting Row number</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                        <option>4</option>
+                    </select>
+                </div>
+                <div style="padding-top: 15px;">
+                    <form id="formDES">
+                        <input type="file" id="UploadDESFile" accept=".csv" style="width: 79.5%;" />
+                        <input type="submit" id="desSubmitBtn" class="btn btn-primary" name="submit" style="width: 20%;" />
+                    </form>
+                </div>
+                <div style="padding-top: 15px;">
+                    <button type="button" class="btn btn-primary" id="showHistogram" onclick="openHistogram()" style="width:100%; margin:auto;">Show Histogram</button>
+                    
+                </div>
+               
+                <div style="padding-top: 15px;">
+                     <!--
+                    <button type="button" class="btn btn-primary" id="testShowHistogram" onclick="testOpenHistogram()" style="width:100%; margin:auto;">Test Histogram</button>
+                    -->
+                    <p id="demo"></p>
+                </div>
+                
+
+                <script>
+                    const formSRC = document.getElementById("formSRC");
+                    const formDES = document.getElementById("formDES")
+                    const csvSRCFile = document.getElementById("UploadSRCFile");
+                    const csvDESFile = document.getElementById("UploadDESFile");
+                    const idChooser = document.getElementById("idSelector");
+                    const markChooser = document.getElementById("marksSelector");
+                    const startChooser = document.getElementById("startSelector");
+                    const showHistBtn = document.getElementById("showHistogram");
+                    const desSubmit = document.getElementById("desSubmitBtn");
+                    const subjectName = document.getElementById("subjectName");
+                    const subjectMarks = document.getElementById("subjectMarks");
+                    
+
+                    chosenIDIdx=-1;
+                    chosenMarksIdx=-1;
+                    chosenStartRow=-1;
+                    subjectNameTxt = "";
+                    subjectMarksVal = 0;
+                    subjectCode = "";
+                    desFileName = "";
+
+
+                    function defaultState(){
+                        idChooser.disabled = true
+                        markChooser.disabled = true
+                        startChooser.disabled = true
+                        csvDESFile.disabled = true
+                        desSubmit.disabled = true
+                        showHistBtn.disabled = true
+                    }
+
+                    function enableIDselector(){
+                        idChooser.disabled = false;
+                    }
+
+                    function enableMarksselector(){
+                        markChooser.disabled = false;
+                    }
+
+                    function enableStartselector(){
+                        startChooser.disabled = false;
+                    }
+
+                    function enableGoBtn(){
+                        showHistBtn.disabled = false;
+                    }
+
+                    function enableDesSelector(){
+                        csvDESFile.disabled = false
+                        desSubmit.disabled = false
+                    }
+
+                    function chooseIDCol(){
+                        let idIdx = idChooser.selectedIndex;
+                        document.getElementById("demo").innerHTML = idIdx;
+                        chosenIDIdx = idIdx - 1;
+                        let srcArrayLen = csvSRCtxt.at(0).length;
+                        var i, L = markChooser.options.length - 1;
+                        for(i = L; i >= 0; i--) {
+                                markChooser.remove(i);
+                        }
+                        markChooser.options[0] = new Option("Choose marks column","Choose marks column");
+                        markChooser.options[0].setAttribute('hidden','true');
+                        for (let i = 0; i < srcArrayLen; i++) {
+                            if(i != (idIdx-1))
+                                markChooser.options[markChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
+                        }
+                        
+                        enableMarksselector();
+                    }
+
+                    function chooseMarkCol(){
+                        let idIdx = markChooser.selectedIndex;
+                        document.getElementById("demo").innerHTML = idIdx;
+                        if(idIdx>chosenIDIdx)
+                            chosenMarksIdx = idIdx;
+                        else
+                        chosenMarksIdx = idIdx-1;
+                        enableStartselector();
+                    }
+
+                    function chooseStartRow(){
+                        chosenStartRow = startChooser.selectedIndex - 1;
+                        enableDesSelector();
+                    }
+
+                    function checkSubjectName(){
+                        subjectNameTxt = subjectName.value.trim();
+                        if(subjectNameTxt!==""){
+                            subjectName.classList.remove('border-danger');
+                        }else{
+                            subjectName.classList.add('border-danger');
+                        }
+                    }
+
+                    function checkSubjectMarks(){
+                        subjectMarksVal = parseInt(subjectMarks.value);
+                        if(subjectMarksVal>0){
+                            subjectMarks.classList.remove('border-danger');
+                        }else{
+                            subjectMarks.classList.add('border-danger');
+                        }
+                        //document.getElementById("demo").innerHTML = subjectMarksVal;
+                    }
+
+                    function makeGradeObject(){
+
+                    }
+
+                    function isSpecialGrade(gradeKey){
+                        var isSpecial = false;
+                        if(gradeKey === "I")
+                            isSpecial = true;
+                        else if(gradeKey === "W")
+                            isSpecial = true;
+                        else if(gradeKey === "NC")
+                            isSpecial = true;
+                        else if(gradeKey === "GA")
+                            isSpecial = true;
+                        else if(gradeKey === "RC")
+                            isSpecial = true;
+                        else if(gradeKey === "DP")
+                            isSpecial = true;
+                        else if(gradeKey === "TGA")
+                            isSpecial = true;
+                        else if(gradeKey === "RRA")
+                            isSpecial = true;
+
+                        return isSpecial;
+                    }
+
+                    function openHistogram(){
+                        subjectNameTxt = subjectName.value.trim();
+                        subjectMarksVal = parseInt(subjectMarks.value);
+                        if(subjectNameTxt===""){
+                            subjectName.classList.add('border-danger');
+                        }
+                        if((subjectMarksVal==0) || (subjectMarksVal==NaN)){
+                            subjectMarks.classList.add('border-danger');
+                        }
+                        if((subjectNameTxt!=="") && (subjectMarksVal>0)){
+
+                            specialGrades = [0, 0, 0, 0, 0, 0, 0, 0];
+                            var specialGradeMap = [];
+                            keepGrades = [true, true, true, true, true, true, true, true];
+                            gradeCutOffs = [];
+
+                            idc = 1;
+                            mc = 31;
+                            erpidcol = 3;  //do not change
+                            erpgradecol = 7; //do not change
+                            erpnamecol = 4; //do not change
+                            counter=0;
+
+                            let arrayLen = csvSRCtxt.length;
+                            let arrayLen2 = parseInt(csvDEStxt.length);
+                            console.log("Length of source csv: "+arrayLen);
+                            console.log("Length of destination csv: "+arrayLen2);
+                            document.getElementById("demo").innerHTML = arrayLen2;
+                            var markMap = [];
+
+
+                            for( let j=1; j < arrayLen2; j++){
+                                let idFromERP = csvDEStxt.at(j).at(erpidcol);
+                                let nameFromERP = csvDEStxt.at(j).at(erpnamecol);
+                                if(typeof idFromERP !== "undefined"){
+                                    idFromERP = idFromERP.trim();
+                                    nameFromERP = nameFromERP.trim();
+                                    let studenteExists = false;
+                                    for(let i = chosenStartRow; i < arrayLen; i++){
+                                        tempstudentID = csvSRCtxt.at(i).at(chosenIDIdx);
+                                        if((typeof  tempstudentID !== "undefined")){
+                                            tempstudentID = tempstudentID.trim();
+                                            studentID = csvSRCtxt.at(i).at(chosenIDIdx).trim();
+                                            studentMarks = parseInt(csvSRCtxt.at(i).at(chosenMarksIdx));
+                                            if( studentID === idFromERP){
+                                                let asPerERP = csvDEStxt.at(j).at(erpgradecol).trim();
+                                                console.log('as per erp: '+asPerERP);
+                                                if(typeof asPerERP !== "undefined"){
+                                                    studenteExists = true;
+                                                    if(!isSpecialGrade(asPerERP)){
+                                                        markMap.push([studentID,studentMarks,nameFromERP]);
+                                                        //console.log("Markmap length is: "+markMap.length);
+                                                        //console.log("Value entered: "+nameFromERP);
+                                                        console.log(studentID+' '+'pushed to normal list');
+                                                    }
+                                                    else{
+                                                        specialGradeMap.push([studentID,asPerERP,nameFromERP,studentMarks]);
+                                                        console.log(studentID+' '+'pushed to special grades');
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if(!studenteExists){
+                                        console.log("Student ID not found in source csv: "+idFromERP);
+                                        let asPerERP = csvDEStxt.at(j).at(erpgradecol).trim();
+                                        console.log('as per erp: '+asPerERP);
+                                        specialGradeMap.push([idFromERP,asPerERP,nameFromERP,0]);
+                                    }
+                                }
+                            }
+
+                            /*
+                            for(let i = chosenStartRow; i < arrayLen; i++){
+                                tempstudentID = csvSRCtxt.at(i).at(chosenIDIdx);
+                                //console.log(typeof tempstudentID);
+
+                                if((typeof  tempstudentID !== "undefined")){
+                                    studentID = csvSRCtxt.at(i).at(chosenIDIdx).trim();
+                                    studentMarks = parseInt(csvSRCtxt.at(i).at(chosenMarksIdx));
+
+                                for( let j=1; j < arrayLen2; j++){
+                                    let idFromERP = csvDEStxt.at(j).at(erpidcol);
+                                    let nameFromERP = csvDEStxt.at(j).at(erpnamecol);
+                                    if(typeof idFromERP !== "undefined"){
+                                        if( studentID === idFromERP){
+                                            let asPerERP = csvDEStxt.at(j).at(erpgradecol);
+                                            if(typeof asPerERP !== "undefined"){
+                                                if((asPerERP !== "W") && (asPerERP !== "I")
+                                                && (asPerERP !== "NC") && (asPerERP !== "GA")
+                                                && (asPerERP !== "RC") && (asPerERP !== "TP")
+                                                && (asPerERP !== "TGA") && (asPerERP !== "RRA")){
+                                                    markMap.push([studentID,studentMarks,nameFromERP]);
+                                                    //console.log("Markmap length is: "+markMap.length);
+                                                    //console.log("Value entered: "+nameFromERP);
+                                                }
+                                                else{
+                                                    specialGradeMap.push([studentID,asPerERP,nameFromERP,-1000]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        //console.log("failed index: "+studentID);
+                                    }
+                                }
+                                }
+
+                            }*/
+                            
+
+                            console.log("Markmap length: "+markMap.length);
+
+                            const gradesDetails = {
+                                code: subjectCode,
+                                subjectName:subjectName.value.trim(), 
+                                fullMarks: parseInt(subjectMarks.value), 
+                                mMap: markMap,
+                                retCSV: csvDEStxt,
+                                specialG: specialGrades,
+                                specialGMap: specialGradeMap,
+                                keepG: keepGrades,
+                                gCutOffs: gradeCutOffs,
+                                retCSVName: desFileName
+                            };
+                            sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                            window.open("histogram.html","_self");
+                        }
+                    }
+                    /*
+                    function testOpenHistogram(){
+                        
+                        //var csv_file = File('OOP_CS_F213_Groups.csv');
+                        //csv_file.open('r');
+                        //document.getElementById("demo").innerHTML = csv_file;
+                        //text = csv_file.read();
+                        //arrayData = csvToArray(text);
+                        
+                        //csv_file.close();
+
+                        specialGrades = [0, 0, 0, 0, 0, 0, 0, 0];
+                        keepGrades = [true, true, true, true, true, true, true, true];
+                        gradeCutOffs = [];
+
+
+                        idc = 1;
+                        mc = 31;
+
+                        let arrayLen = csvSRCtxt.length;
+                        document.getElementById("demo").innerHTML = arrayLen;
+                        var markMap = [];
+
+                        for(let i = 1; i < arrayLen; i++){
+                            studentID = csvSRCtxt.at(i).at(idc).trim();
+                            studentMarks = parseInt(csvSRCtxt.at(i).at(mc));
+                            markMap.push([studentID,studentMarks]);
+                        }
+
+                        const gradesDetails = {
+                            code: subjectCode,
+                            subjectName:subjectName.value.trim(), 
+                            fullMarks: parseInt(subjectMarks.value), 
+                            mMap: markMap,
+                            retCSV: csvDEStxt,
+                            specialG: specialGrades,
+                            keepG: keepGrades,
+                            gCutOffs: gradeCutOffs,
+                            retCSVName: desFileName
+                        };
+                        sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                        window.open("histogram.html","_self");
+                        //document.getElementById("demo").innerHTML = markMap;
+
+                    }
+                    */
+                    function csvToArray (csv) {
+                        rows = csv.split("\n");
+                    
+                        return rows.map(function (row) {
+                            return row.split(",");
+                        });
+                    };
+            
+                    csvSRCtxt = "";
+                    csvDEStxt = "";
+                
+                    formSRC.addEventListener("submit", function (e) {
+                      e.preventDefault();
+                      const input = csvSRCFile.files[0];
+                      
+                      //console.log(input)
+                      const reader = new FileReader();
+                      
+                      reader.onload = function (e) {
+                        const text = e.target.result;
+                        //const csvData = d3.csvParse(text);
+                        csvSRCtxt = csvToArray(text);
+                        let srcArrayLen = csvSRCtxt.length;
+                        //document.getElementById("demo").innerHTML = srcArrayLen;
+
+                        for (let i = 0; i < srcArrayLen; i++) {
+                            idChooser.options[idChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
+                            markChooser.options[markChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
+                        }
+                          enableIDselector();
+                        //document.write(JSON.stringify(csvSRCtxt));
+                        //console.log("CSV Read")
+                      };
+                      reader.readAsText(input);
+                    });
+            
+                    formDES.addEventListener("submit", function (e) {
+                        e.preventDefault();
+                        const input = csvDESFile.files[0];
+                        const reader = new FileReader();
+                        desFileName = input.name.split(/(\\|\/)/g).pop();
+                        tempArray = desFileName.split("_");
+                        subjectCode = tempArray[1]+" "+tempArray[2];
+                        //document.getElementById("demo").innerHTML = subjectCode;
+                        //code to extract subject code from file name
+                        reader.onload = function (e) {
+                          const text = e.target.result;
+                          //const csvData = d3.csvParse(text);
+                          csvDEStxt = csvToArray(text);
+                          
+                          let arrayLen2 = parseInt(csvDEStxt.length);
+                          //document.getElementById("demo").innerHTML = arrayLen2;
+                          //document.write(JSON.stringify(csvDEStxt));
+                          enableGoBtn();
+                        };
+                        reader.readAsText(input);
+                    });
+            
+            
+                  </script>
+
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+    </div>
+</body>
