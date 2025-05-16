@@ -228,6 +228,37 @@
         color: #FFF;
       }
 
+      .green-radio {
+        accent-color: lightgreen; /* Default background */
+        /* Fallback for older browsers */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: orange;
+        border: 1px solid #ced4da;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        outline: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out; /* Smooth transition */
+        }
+
+        .green-radio:checked {
+        background-color: lightblue; /* Blue on select */
+        }
+
+        /* Optional: Style the "checked" indicator */
+        .green-radio:checked::before {
+        content: '';
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: darkblue; /* Inner circle color when checked */
+        margin: 2px;
+        }
+
     </style>
     <script>
         gradesDetails = JSON.parse(sessionStorage.getItem("gradeObject"));
@@ -549,28 +580,28 @@
                         <h6 style="text-align: right;">Change Grades: </h6>
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb1" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb1" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb2" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb2" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb3" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb3" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb4" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb4" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb5" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb5" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb6" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb6" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb7" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb7" class="form-check-input green-radio" name="optradio">
                     </div>
                     <div class="col-sm-1" style="text-align: center;">
-                        <input type="radio" id="grb8" class="form-check-input" name="optradio">
+                        <input type="radio" id="grb8" class="form-check-input green-radio" name="optradio">
                     </div>
                 </div>
                 
@@ -3125,4 +3156,3 @@
     </script>
 </body>
 </html>
-
