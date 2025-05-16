@@ -298,7 +298,8 @@
                                     }
                                 }
                             }
-
+                            
+                             
                             /*
                             for(let i = chosenStartRow; i < arrayLen; i++){
                                 tempstudentID = csvSRCtxt.at(i).at(chosenIDIdx);
@@ -339,6 +340,7 @@
                             
 
                             console.log("Markmap length: "+markMap.length);
+                            
 
                             const gradesDetails = {
                                 code: subjectCode,
@@ -352,8 +354,71 @@
                                 gCutOffs: gradeCutOffs,
                                 retCSVName: desFileName
                             };
-                            sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                            window.open("histogram.html","_self");
+
+                            //show a dialogbox listing the contents of specialGradeMap as a table on pressing a okay button further functions are executed
+                            if (specialGradeMap.length > 0) {
+                                // Create modal HTML
+                                let modalHtml = `
+                                <div class="modal fade" id="specialGradesModal" tabindex="-1" aria-labelledby="specialGradesModalLabel" aria-hidden="true">
+                                  <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                      <div class="modal-header">
+                                        <h5 class="modal-title" id="specialGradesModalLabel">Special Grades Found</h5>
+                                        <h6 class="modal-title" id="specialGradesModalLabel2">For these students, change marks manually in the ERP CSV manually if you need to.</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                      </div>
+                                      <div class="modal-body">
+                                        <div class="table-responsive">
+                                          <table class="table table-bordered">
+                                            <thead>
+                                              <tr>
+                                                <th>Student ID</th>
+                                                <th>Grade</th>
+                                                <th>Name</th>
+                                                <th>Marks</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              ${specialGradeMap.map(row => `
+                                                <tr>
+                                                  <td>${row[0]}</td>
+                                                  <td>${row[1]}</td>
+                                                  <td>${row[2]}</td>
+                                                  <td>${row[3]}</td>
+                                                </tr>
+                                              `).join('')}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                      <div class="modal-footer">
+                                        <button type="button" id="specialGradesOkBtn" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                `;
+                                // Append modal to body if not already present
+                                if (!document.getElementById('specialGradesModal')) {
+                                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                                }
+                                // Show modal
+                                var specialGradesModal = new bootstrap.Modal(document.getElementById('specialGradesModal'));
+                                specialGradesModal.show();
+
+                                // On OK, proceed to next steps
+                                document.getElementById('specialGradesOkBtn').onclick = function() {
+                                    sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                                    window.open("histogram.html","_self");
+                                };
+                                return; // Prevent further execution until modal is closed
+                            } else {
+                                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                                window.open("histogram.html","_self");
+                            }
+
+                            //sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                            //window.open("histogram.html","_self");
                         }
                     }
                     /*
@@ -468,3 +533,4 @@
         </div>
     </div>
 </body>
+</html>
