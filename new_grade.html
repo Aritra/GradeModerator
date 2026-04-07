@@ -1,536 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    
     <title>BITS Pilani Grade Moderator</title>
 </head>
-
 <body onload="defaultState()">
     <div class="container-fluid">
         <div class="row">
             <div class="col-sm-2"></div>
             <div class="col-sm-8">
                 <div style="padding-top:15px; padding-bottom:15px;">
-                    <h1>Create New Grades</h1> 
-                    <p>Choose the csv file you have saved and the one downloaded from the ERP, choose the ID and marks columns and the starting row (usually 2)</p> 
+                    <h1>Create New Grades</h1>
+                    <p>
+                        Choose the CSV file you have saved and the one downloaded from ERP.
+                        Select the ID and marks columns, the starting row (usually 2),
+                        then upload the ERP CSV file.
+                    </p>
                 </div>
                 <img src="imgs/separator.svg" class="mx-auto d-block" style="width:100%">
+
+                <!-- Subject name input -->
                 <div style="padding-top: 15px;">
                     <div class="row">
-                        <div class="col-sm-3">
-                            <p>Enter Subject Name: </p>
-                        </div>
+                        <div class="col-sm-3"><p>Enter Subject Name:</p></div>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" id="subjectName" onKeyPress="checkSubjectName();" onkeyup="checkSubjectName();" placeholder="Subject name only (without subject code)" required>
+                            <input type="text" class="form-control" id="subjectName"
+                                onkeyup="checkSubjectName();"
+                                placeholder="Subject name only (without subject code)" required>
                         </div>
                     </div>
                 </div>
+
+                <!-- Maximum marks input -->
                 <div style="padding-top: 15px;">
                     <div class="row">
-                        <div class="col-sm-3">
-                            <p>Enter Maximum Marks: </p>
-                        </div>
+                        <div class="col-sm-3"><p>Enter Maximum Marks:</p></div>
                         <div class="col-sm-9">
-                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks" placeholder="Integer input only, minimum value 0" required>
-                            <script>
-                                jQuery(function($) {
-                                    //$('#subjectMarks').on('input', checkSubjectMarks());
-                                    $('#subjectMarks').bind('keyup mouseup', function () {
-                                        checkSubjectMarks();            
-                                    });
-                                  });
-                            </script>
+                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks"
+                                placeholder="Integer input only, minimum value 0" required
+                                oninput="checkSubjectMarks();">
                         </div>
                     </div>
                 </div>
+
+                <!-- Source (marks) CSV upload form -->
                 <div style="padding-top: 15px;">
                     <form id="formSRC">
                         <input type="file" id="UploadSRCFile" accept=".csv" style="width: 79.5%;"/>
                         <input type="submit" class="btn btn-primary" name="submit" style="width: 20%;"/>
                     </form>
                 </div>
+
+                <!-- Column selectors — enabled progressively as user makes choices -->
                 <div style="padding-top: 15px;">
                     <select id="idSelector" onchange="chooseIDCol();" class="form-select">
-                        <option hidden >Choose ID column</option>
+                        <option hidden>Choose ID column</option>
                     </select>
                 </div>
                 <div style="padding-top: 15px;">
                     <select id="marksSelector" onchange="chooseMarkCol();" class="form-select">
-                        <option hidden >Choose marks column</option>
+                        <option hidden>Choose marks column</option>
                     </select>
                 </div>
                 <div style="padding-top: 15px;">
                     <select id="startSelector" onchange="chooseStartRow();" class="form-select">
-                        <option hidden >Starting Row number</option>
+                        <option hidden>Starting Row number</option>
                         <option>1</option>
                         <option>2</option>
                         <option>3</option>
                         <option>4</option>
                     </select>
                 </div>
+
+                <!-- Destination (ERP) CSV upload form -->
                 <div style="padding-top: 15px;">
                     <form id="formDES">
                         <input type="file" id="UploadDESFile" accept=".csv" style="width: 79.5%;" />
-                        <input type="submit" id="desSubmitBtn" class="btn btn-primary" name="submit" style="width: 20%;" />
+                        <input type="submit" id="desSubmitBtn" class="btn btn-primary"
+                            name="submit" style="width: 20%;" />
                     </form>
                 </div>
+
+                <!-- Launch histogram button -->
                 <div style="padding-top: 15px;">
-                    <button type="button" class="btn btn-primary" id="showHistogram" onclick="openHistogram()" style="width:100%; margin:auto;">Show Histogram</button>
-                    
+                    <button type="button" class="btn btn-primary" id="showHistogram"
+                        onclick="openHistogram()" style="width:100%; margin:auto;">
+                        Show Histogram
+                    </button>
                 </div>
-               
+
+                <!-- Debug / status text -->
                 <div style="padding-top: 15px;">
-                     <!--
-                    <button type="button" class="btn btn-primary" id="testShowHistogram" onclick="testOpenHistogram()" style="width:100%; margin:auto;">Test Histogram</button>
-                    -->
                     <p id="demo"></p>
                 </div>
-                
-
-                <script>
-                    const formSRC = document.getElementById("formSRC");
-                    const formDES = document.getElementById("formDES")
-                    const csvSRCFile = document.getElementById("UploadSRCFile");
-                    const csvDESFile = document.getElementById("UploadDESFile");
-                    const idChooser = document.getElementById("idSelector");
-                    const markChooser = document.getElementById("marksSelector");
-                    const startChooser = document.getElementById("startSelector");
-                    const showHistBtn = document.getElementById("showHistogram");
-                    const desSubmit = document.getElementById("desSubmitBtn");
-                    const subjectName = document.getElementById("subjectName");
-                    const subjectMarks = document.getElementById("subjectMarks");
-                    
-
-                    chosenIDIdx=-1;
-                    chosenMarksIdx=-1;
-                    chosenStartRow=-1;
-                    subjectNameTxt = "";
-                    subjectMarksVal = 0;
-                    subjectCode = "";
-                    desFileName = "";
-
-
-                    function defaultState(){
-                        idChooser.disabled = true
-                        markChooser.disabled = true
-                        startChooser.disabled = true
-                        csvDESFile.disabled = true
-                        desSubmit.disabled = true
-                        showHistBtn.disabled = true
-                    }
-
-                    function enableIDselector(){
-                        idChooser.disabled = false;
-                    }
-
-                    function enableMarksselector(){
-                        markChooser.disabled = false;
-                    }
-
-                    function enableStartselector(){
-                        startChooser.disabled = false;
-                    }
-
-                    function enableGoBtn(){
-                        showHistBtn.disabled = false;
-                    }
-
-                    function enableDesSelector(){
-                        csvDESFile.disabled = false
-                        desSubmit.disabled = false
-                    }
-
-                    function chooseIDCol(){
-                        let idIdx = idChooser.selectedIndex;
-                        document.getElementById("demo").innerHTML = idIdx;
-                        chosenIDIdx = idIdx - 1;
-                        let srcArrayLen = csvSRCtxt.at(0).length;
-                        var i, L = markChooser.options.length - 1;
-                        for(i = L; i >= 0; i--) {
-                                markChooser.remove(i);
-                        }
-                        markChooser.options[0] = new Option("Choose marks column","Choose marks column");
-                        markChooser.options[0].setAttribute('hidden','true');
-                        for (let i = 0; i < srcArrayLen; i++) {
-                            if(i != (idIdx-1))
-                                markChooser.options[markChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
-                        }
-                        
-                        enableMarksselector();
-                    }
-
-                    function chooseMarkCol(){
-                        let idIdx = markChooser.selectedIndex;
-                        document.getElementById("demo").innerHTML = idIdx;
-                        if(idIdx>chosenIDIdx)
-                            chosenMarksIdx = idIdx;
-                        else
-                        chosenMarksIdx = idIdx-1;
-                        enableStartselector();
-                    }
-
-                    function chooseStartRow(){
-                        chosenStartRow = startChooser.selectedIndex - 1;
-                        enableDesSelector();
-                    }
-
-                    function checkSubjectName(){
-                        subjectNameTxt = subjectName.value.trim();
-                        if(subjectNameTxt!==""){
-                            subjectName.classList.remove('border-danger');
-                        }else{
-                            subjectName.classList.add('border-danger');
-                        }
-                    }
-
-                    function checkSubjectMarks(){
-                        subjectMarksVal = parseInt(subjectMarks.value);
-                        if(subjectMarksVal>0){
-                            subjectMarks.classList.remove('border-danger');
-                        }else{
-                            subjectMarks.classList.add('border-danger');
-                        }
-                        //document.getElementById("demo").innerHTML = subjectMarksVal;
-                    }
-
-                    function makeGradeObject(){
-
-                    }
-
-                    function isSpecialGrade(gradeKey){
-                        var isSpecial = false;
-                        if(gradeKey === "I")
-                            isSpecial = true;
-                        else if(gradeKey === "W")
-                            isSpecial = true;
-                        else if(gradeKey === "NC")
-                            isSpecial = true;
-                        else if(gradeKey === "GA")
-                            isSpecial = true;
-                        else if(gradeKey === "RC")
-                            isSpecial = true;
-                        else if(gradeKey === "DP")
-                            isSpecial = true;
-                        else if(gradeKey === "TGA")
-                            isSpecial = true;
-                        else if(gradeKey === "RRA")
-                            isSpecial = true;
-
-                        return isSpecial;
-                    }
-
-                    function openHistogram(){
-                        subjectNameTxt = subjectName.value.trim();
-                        subjectMarksVal = parseInt(subjectMarks.value);
-                        if(subjectNameTxt===""){
-                            subjectName.classList.add('border-danger');
-                        }
-                        if((subjectMarksVal==0) || (subjectMarksVal==NaN)){
-                            subjectMarks.classList.add('border-danger');
-                        }
-                        if((subjectNameTxt!=="") && (subjectMarksVal>0)){
-
-                            specialGrades = [0, 0, 0, 0, 0, 0, 0, 0];
-                            var specialGradeMap = [];
-                            keepGrades = [true, true, true, true, true, true, true, true];
-                            gradeCutOffs = [];
-
-                            idc = 1;
-                            mc = 31;
-                            erpidcol = 3;  //do not change
-                            erpgradecol = 7; //do not change
-                            erpnamecol = 4; //do not change
-                            counter=0;
-
-                            let arrayLen = csvSRCtxt.length;
-                            let arrayLen2 = parseInt(csvDEStxt.length);
-                            console.log("Length of source csv: "+arrayLen);
-                            console.log("Length of destination csv: "+arrayLen2);
-                            document.getElementById("demo").innerHTML = arrayLen2;
-                            var markMap = [];
-
-
-                            for( let j=1; j < arrayLen2; j++){
-                                let idFromERP = csvDEStxt.at(j).at(erpidcol);
-                                let nameFromERP = csvDEStxt.at(j).at(erpnamecol);
-                                if(typeof idFromERP !== "undefined"){
-                                    idFromERP = idFromERP.trim();
-                                    nameFromERP = nameFromERP.trim();
-                                    let studenteExists = false;
-                                    for(let i = chosenStartRow; i < arrayLen; i++){
-                                        tempstudentID = csvSRCtxt.at(i).at(chosenIDIdx);
-                                        if((typeof  tempstudentID !== "undefined")){
-                                            tempstudentID = tempstudentID.trim();
-                                            studentID = csvSRCtxt.at(i).at(chosenIDIdx).trim();
-                                            studentMarks = parseInt(csvSRCtxt.at(i).at(chosenMarksIdx));
-                                            if( studentID === idFromERP){
-                                                let asPerERP = csvDEStxt.at(j).at(erpgradecol).trim();
-                                                console.log('as per erp: '+asPerERP);
-                                                if(typeof asPerERP !== "undefined"){
-                                                    studenteExists = true;
-                                                    if(!isSpecialGrade(asPerERP)){
-                                                        markMap.push([studentID,studentMarks,nameFromERP]);
-                                                        //console.log("Markmap length is: "+markMap.length);
-                                                        //console.log("Value entered: "+nameFromERP);
-                                                        console.log(studentID+' '+'pushed to normal list');
-                                                    }
-                                                    else{
-                                                        specialGradeMap.push([studentID,asPerERP,nameFromERP,studentMarks]);
-                                                        console.log(studentID+' '+'pushed to special grades');
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if(!studenteExists){
-                                        console.log("Student ID not found in source csv: "+idFromERP);
-                                        let asPerERP = csvDEStxt.at(j).at(erpgradecol).trim();
-                                        console.log('as per erp: '+asPerERP);
-                                        specialGradeMap.push([idFromERP,asPerERP,nameFromERP,0]);
-                                    }
-                                }
-                            }
-                            
-                             
-                            /*
-                            for(let i = chosenStartRow; i < arrayLen; i++){
-                                tempstudentID = csvSRCtxt.at(i).at(chosenIDIdx);
-                                //console.log(typeof tempstudentID);
-
-                                if((typeof  tempstudentID !== "undefined")){
-                                    studentID = csvSRCtxt.at(i).at(chosenIDIdx).trim();
-                                    studentMarks = parseInt(csvSRCtxt.at(i).at(chosenMarksIdx));
-
-                                for( let j=1; j < arrayLen2; j++){
-                                    let idFromERP = csvDEStxt.at(j).at(erpidcol);
-                                    let nameFromERP = csvDEStxt.at(j).at(erpnamecol);
-                                    if(typeof idFromERP !== "undefined"){
-                                        if( studentID === idFromERP){
-                                            let asPerERP = csvDEStxt.at(j).at(erpgradecol);
-                                            if(typeof asPerERP !== "undefined"){
-                                                if((asPerERP !== "W") && (asPerERP !== "I")
-                                                && (asPerERP !== "NC") && (asPerERP !== "GA")
-                                                && (asPerERP !== "RC") && (asPerERP !== "TP")
-                                                && (asPerERP !== "TGA") && (asPerERP !== "RRA")){
-                                                    markMap.push([studentID,studentMarks,nameFromERP]);
-                                                    //console.log("Markmap length is: "+markMap.length);
-                                                    //console.log("Value entered: "+nameFromERP);
-                                                }
-                                                else{
-                                                    specialGradeMap.push([studentID,asPerERP,nameFromERP,-1000]);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else{
-                                        //console.log("failed index: "+studentID);
-                                    }
-                                }
-                                }
-
-                            }*/
-                            
-
-                            console.log("Markmap length: "+markMap.length);
-                            
-
-                            const gradesDetails = {
-                                code: subjectCode,
-                                subjectName:subjectName.value.trim(), 
-                                fullMarks: parseInt(subjectMarks.value), 
-                                mMap: markMap,
-                                retCSV: csvDEStxt,
-                                specialG: specialGrades,
-                                specialGMap: specialGradeMap,
-                                keepG: keepGrades,
-                                gCutOffs: gradeCutOffs,
-                                retCSVName: desFileName
-                            };
-
-                            //show a dialogbox listing the contents of specialGradeMap as a table on pressing a okay button further functions are executed
-                            if (specialGradeMap.length > 0) {
-                                // Create modal HTML
-                                let modalHtml = `
-                                <div class="modal fade" id="specialGradesModal" tabindex="-1" aria-labelledby="specialGradesModalLabel" aria-hidden="true">
-                                  <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                      <div class="modal-header">
-                                        <h5 class="modal-title" id="specialGradesModalLabel">Special Grades Found</h5>
-                                        <h6 class="modal-title" id="specialGradesModalLabel2">For these students, change marks manually in the ERP CSV manually if you need to.</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                      </div>
-                                      <div class="modal-body">
-                                        <div class="table-responsive">
-                                          <table class="table table-bordered">
-                                            <thead>
-                                              <tr>
-                                                <th>Student ID</th>
-                                                <th>Grade</th>
-                                                <th>Name</th>
-                                                <th>Marks</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              ${specialGradeMap.map(row => `
-                                                <tr>
-                                                  <td>${row[0]}</td>
-                                                  <td>${row[1]}</td>
-                                                  <td>${row[2]}</td>
-                                                  <td>${row[3]}</td>
-                                                </tr>
-                                              `).join('')}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </div>
-                                      <div class="modal-footer">
-                                        <button type="button" id="specialGradesOkBtn" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                `;
-                                // Append modal to body if not already present
-                                if (!document.getElementById('specialGradesModal')) {
-                                    document.body.insertAdjacentHTML('beforeend', modalHtml);
-                                }
-                                // Show modal
-                                var specialGradesModal = new bootstrap.Modal(document.getElementById('specialGradesModal'));
-                                specialGradesModal.show();
-
-                                // On OK, proceed to next steps
-                                document.getElementById('specialGradesOkBtn').onclick = function() {
-                                    sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                                    window.open("histogram.html","_self");
-                                };
-                                return; // Prevent further execution until modal is closed
-                            } else {
-                                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                                window.open("histogram.html","_self");
-                            }
-
-                            //sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                            //window.open("histogram.html","_self");
-                        }
-                    }
-                    /*
-                    function testOpenHistogram(){
-                        
-                        //var csv_file = File('OOP_CS_F213_Groups.csv');
-                        //csv_file.open('r');
-                        //document.getElementById("demo").innerHTML = csv_file;
-                        //text = csv_file.read();
-                        //arrayData = csvToArray(text);
-                        
-                        //csv_file.close();
-
-                        specialGrades = [0, 0, 0, 0, 0, 0, 0, 0];
-                        keepGrades = [true, true, true, true, true, true, true, true];
-                        gradeCutOffs = [];
-
-
-                        idc = 1;
-                        mc = 31;
-
-                        let arrayLen = csvSRCtxt.length;
-                        document.getElementById("demo").innerHTML = arrayLen;
-                        var markMap = [];
-
-                        for(let i = 1; i < arrayLen; i++){
-                            studentID = csvSRCtxt.at(i).at(idc).trim();
-                            studentMarks = parseInt(csvSRCtxt.at(i).at(mc));
-                            markMap.push([studentID,studentMarks]);
-                        }
-
-                        const gradesDetails = {
-                            code: subjectCode,
-                            subjectName:subjectName.value.trim(), 
-                            fullMarks: parseInt(subjectMarks.value), 
-                            mMap: markMap,
-                            retCSV: csvDEStxt,
-                            specialG: specialGrades,
-                            keepG: keepGrades,
-                            gCutOffs: gradeCutOffs,
-                            retCSVName: desFileName
-                        };
-                        sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                        window.open("histogram.html","_self");
-                        //document.getElementById("demo").innerHTML = markMap;
-
-                    }
-                    */
-                    function csvToArray (csv) {
-                        rows = csv.split("\n");
-                    
-                        return rows.map(function (row) {
-                            return row.split(",");
-                        });
-                    };
-            
-                    csvSRCtxt = "";
-                    csvDEStxt = "";
-                
-                    formSRC.addEventListener("submit", function (e) {
-                      e.preventDefault();
-                      const input = csvSRCFile.files[0];
-                      
-                      //console.log(input)
-                      const reader = new FileReader();
-                      
-                      reader.onload = function (e) {
-                        const text = e.target.result;
-                        //const csvData = d3.csvParse(text);
-                        csvSRCtxt = csvToArray(text);
-                        let srcArrayLen = csvSRCtxt.length;
-                        //document.getElementById("demo").innerHTML = srcArrayLen;
-
-                        for (let i = 0; i < srcArrayLen; i++) {
-                            idChooser.options[idChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
-                            markChooser.options[markChooser.options.length] = new Option(csvSRCtxt.at(0).at(i), csvSRCtxt.at(0).at(i));
-                        }
-                          enableIDselector();
-                        //document.write(JSON.stringify(csvSRCtxt));
-                        //console.log("CSV Read")
-                      };
-                      reader.readAsText(input);
-                    });
-            
-                    formDES.addEventListener("submit", function (e) {
-                        e.preventDefault();
-                        const input = csvDESFile.files[0];
-                        const reader = new FileReader();
-                        desFileName = input.name.split(/(\\|\/)/g).pop();
-                        tempArray = desFileName.split("_");
-                        subjectCode = tempArray[1]+" "+tempArray[2];
-                        //document.getElementById("demo").innerHTML = subjectCode;
-                        //code to extract subject code from file name
-                        reader.onload = function (e) {
-                          const text = e.target.result;
-                          //const csvData = d3.csvParse(text);
-                          csvDEStxt = csvToArray(text);
-                          
-                          let arrayLen2 = parseInt(csvDEStxt.length);
-                          //document.getElementById("demo").innerHTML = arrayLen2;
-                          //document.write(JSON.stringify(csvDEStxt));
-                          enableGoBtn();
-                        };
-                        reader.readAsText(input);
-                    });
-            
-            
-                  </script>
-
             </div>
             <div class="col-sm-2"></div>
         </div>
     </div>
+
+    <script>
+        // ── DOM references ────────────────────────────────────────────────────────
+        const formSRC      = document.getElementById("formSRC");
+        const formDES      = document.getElementById("formDES");
+        const csvSRCFile   = document.getElementById("UploadSRCFile");
+        const csvDESFile   = document.getElementById("UploadDESFile");
+        const idChooser    = document.getElementById("idSelector");
+        const markChooser  = document.getElementById("marksSelector");
+        const startChooser = document.getElementById("startSelector");
+        const showHistBtn  = document.getElementById("showHistogram");
+        const desSubmit    = document.getElementById("desSubmitBtn");
+        const subjectName  = document.getElementById("subjectName");
+        const subjectMarks = document.getElementById("subjectMarks");
+
+        // ── State ─────────────────────────────────────────────────────────────────
+        let chosenIDIdx    = -1;
+        let chosenMarksIdx = -1;
+        let chosenStartRow = -1;
+        let subjectNameTxt = "";
+        let subjectMarksVal = 0;
+        let subjectCode    = "";
+        let desFileName    = "";
+        let csvSRCtxt      = "";   // 2D array from source CSV
+        let csvDEStxt      = "";   // 2D array from ERP (destination) CSV
+
+        // ERP CSV column indices — must not change; these are the ERP format constants
+        const ERP_ID_COL    = 3;
+        const ERP_GRADE_COL = 7;
+        const ERP_NAME_COL  = 4;
+
+        // Special grade codes that mean the student is not letter-graded
+        const SPECIAL_GRADES = new Set(["W", "I", "NC", "GA", "RC", "DP", "TGA", "RRA"]);
+
+        // ── Initialisation ────────────────────────────────────────────────────────
+
+        /** Disable controls that require prior steps to be complete. */
+        function defaultState() {
+            idChooser.disabled    = true;
+            markChooser.disabled  = true;
+            startChooser.disabled = true;
+            csvDESFile.disabled   = true;
+            desSubmit.disabled    = true;
+            showHistBtn.disabled  = true;
+        }
+
+        // ── Progressive enable helpers ────────────────────────────────────────────
+
+        function enableIDselector()    { idChooser.disabled = false; }
+        function enableMarksselector() { markChooser.disabled = false; }
+        function enableStartselector() { startChooser.disabled = false; }
+        function enableGoBtn()         { showHistBtn.disabled = false; }
+        function enableDesSelector()   { csvDESFile.disabled = false; desSubmit.disabled = false; }
+
+        // ── Column / row selection ────────────────────────────────────────────────
+
+        /**
+         * User chose the ID column.
+         * Rebuild the marks selector, excluding the chosen ID column.
+         */
+        function chooseIDCol() {
+            const idIdx    = idChooser.selectedIndex;
+            chosenIDIdx    = idIdx - 1;   // -1 because index 0 is the hidden placeholder
+            const srcLen   = csvSRCtxt[0].length;
+
+            // Reset marks selector
+            while (markChooser.options.length > 0) markChooser.remove(0);
+            markChooser.options[0] = new Option("Choose marks column", "Choose marks column");
+            markChooser.options[0].setAttribute('hidden', 'true');
+
+            for (let i = 0; i < srcLen; i++) {
+                if (i !== (idIdx - 1)) {
+                    markChooser.options[markChooser.options.length] =
+                        new Option(csvSRCtxt[0][i], csvSRCtxt[0][i]);
+                }
+            }
+            enableMarksselector();
+        }
+
+        /**
+         * User chose the marks column.
+         * The marks selector skips the ID column, so we must adjust the index offset.
+         */
+        function chooseMarkCol() {
+            const idIdx    = markChooser.selectedIndex;
+            // If the selected index comes after where the skipped ID column was,
+            // the actual column index is one more than the selector index.
+            chosenMarksIdx = (idIdx > chosenIDIdx) ? idIdx : idIdx - 1;
+            enableStartselector();
+        }
+
+        /** User chose the starting data row (0-indexed after adjustment). */
+        function chooseStartRow() {
+            chosenStartRow = startChooser.selectedIndex - 1;
+            enableDesSelector();
+        }
+
+        // ── Validation ────────────────────────────────────────────────────────────
+
+        function checkSubjectName() {
+            subjectNameTxt = subjectName.value.trim();
+            subjectName.classList.toggle('border-danger', subjectNameTxt === "");
+        }
+
+        function checkSubjectMarks() {
+            subjectMarksVal = parseInt(subjectMarks.value, 10);
+            subjectMarks.classList.toggle('border-danger', !(subjectMarksVal > 0));
+        }
+
+        // ── Special grade check ───────────────────────────────────────────────────
+
+        /** Returns true if the ERP grade code represents a non-letter special grade. */
+        function isSpecialGrade(gradeKey) {
+            return SPECIAL_GRADES.has(gradeKey);
+        }
+
+        // ── CSV parsing ───────────────────────────────────────────────────────────
+
+        /**
+         * Parse a CSV text string into a 2D array.
+         * Note: does not handle quoted fields containing commas.
+         */
+        function csvToArray(csv) {
+            return csv.split("\n").map(row => row.split(","));
+        }
+
+        // ── File upload handlers ──────────────────────────────────────────────────
+
+        /** Read the source (marks) CSV and populate column selectors. */
+        formSRC.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const input  = csvSRCFile.files[0];
+            if (!input) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                csvSRCtxt  = csvToArray(e.target.result);
+                const cols = csvSRCtxt[0].length;
+
+                // Populate both selectors with all column headers from row 0
+                for (let i = 0; i < cols; i++) {
+                    const label = csvSRCtxt[0][i];
+                    idChooser.options[idChooser.options.length]     = new Option(label, label);
+                    markChooser.options[markChooser.options.length]  = new Option(label, label);
+                }
+                enableIDselector();
+            };
+            reader.readAsText(input);
+        });
+
+        /** Read the destination (ERP) CSV file. */
+        formDES.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const input = csvDESFile.files[0];
+            if (!input) return;
+
+            // Extract subject code from the ERP filename convention: ..._CODE_NAME_...csv
+            desFileName  = input.name.split(/(\\|\/)/g).pop();
+            const parts  = desFileName.split("_");
+            subjectCode  = parts[1] + " " + parts[2];
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                csvDEStxt = csvToArray(e.target.result);
+                enableGoBtn();
+            };
+            reader.readAsText(input);
+        });
+
+        // ── Main action: open histogram ───────────────────────────────────────────
+
+        /**
+         * Validate inputs, build the grade data object, handle special grades,
+         * store in sessionStorage, and navigate to histogram.html.
+         */
+        function openHistogram() {
+            // Re-validate before proceeding
+            subjectNameTxt  = subjectName.value.trim();
+            subjectMarksVal = parseInt(subjectMarks.value, 10);
+
+            if (subjectNameTxt === "") {
+                subjectName.classList.add('border-danger');
+            }
+            // BUG FIX: previously used `== NaN` which is always false; isNaN() is correct
+            if (isNaN(subjectMarksVal) || subjectMarksVal <= 0) {
+                subjectMarks.classList.add('border-danger');
+            }
+            if (subjectNameTxt === "" || isNaN(subjectMarksVal) || subjectMarksVal <= 0) return;
+
+            // Build mark map: [studentID, marks, studentName]
+            const specialGradeMap = [];
+            const markMap         = [];
+            const specialGrades   = [0, 0, 0, 0, 0, 0, 0, 0];
+            const keepGrades      = [true, true, true, true, true, true, true, true];
+            const gradeCutOffs    = [];  // empty → histogram will compute even divisions
+
+            const erpRows = csvDEStxt.length;
+            const srcRows = csvSRCtxt.length;
+
+            // Primary loop: iterate ERP rows so every ERP student is accounted for
+            for (let j = 1; j < erpRows; j++) {
+                const idFromERP   = csvDEStxt[j][ERP_ID_COL];
+                const nameFromERP = csvDEStxt[j][ERP_NAME_COL];
+                if (typeof idFromERP === "undefined") continue;
+
+                const cleanID   = idFromERP.trim();
+                const cleanName = nameFromERP.trim();
+                let studentFound = false;
+
+                // Search source CSV for a matching student ID
+                for (let i = chosenStartRow; i < srcRows; i++) {
+                    const tempID = csvSRCtxt[i][chosenIDIdx];
+                    if (typeof tempID === "undefined") continue;
+
+                    const studentID    = tempID.trim();
+                    const studentMarks = parseInt(csvSRCtxt[i][chosenMarksIdx], 10);
+
+                    if (studentID === cleanID) {
+                        studentFound     = true;
+                        const asPerERP   = csvDEStxt[j][ERP_GRADE_COL].trim();
+                        if (typeof asPerERP === "undefined") break;
+
+                        if (!isSpecialGrade(asPerERP)) {
+                            // Normal graded student → goes into the histogram mark map
+                            markMap.push([studentID, studentMarks, cleanName]);
+                            console.log(`${studentID} pushed to normal list`);
+                        } else {
+                            // Special grade student — listed separately for review
+                            specialGradeMap.push([studentID, asPerERP, cleanName, studentMarks]);
+                            console.log(`${studentID} pushed to special grades (${asPerERP})`);
+                        }
+                        break;
+                    }
+                }
+
+                if (!studentFound) {
+                    // Student in ERP but not in source CSV (e.g., withdrew before exam)
+                    const asPerERP = csvDEStxt[j][ERP_GRADE_COL].trim();
+                    console.log(`Student ${cleanID} not found in source CSV`);
+                    specialGradeMap.push([cleanID, asPerERP, cleanName, 0]);
+                }
+            }
+
+            console.log(`Mark map length: ${markMap.length}`);
+            console.log(`Special grade map length: ${specialGradeMap.length}`);
+
+            // Build the grade object to pass to histogram.html via sessionStorage
+            const gradesDetails = {
+                code:        subjectCode,
+                subjectName: subjectNameTxt,
+                fullMarks:   subjectMarksVal,
+                mMap:        markMap,
+                retCSV:      csvDEStxt,
+                specialG:    specialGrades,
+                specialGMap: specialGradeMap,
+                keepG:       keepGrades,
+                gCutOffs:    gradeCutOffs,
+                retCSVName:  desFileName
+            };
+
+            // If there are special grades, show them for the instructor to review
+            if (specialGradeMap.length > 0) {
+                showSpecialGradesModal(gradesDetails, specialGradeMap);
+            } else {
+                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                window.open("histogram.html", "_self");
+            }
+        }
+
+        /**
+         * Display a modal listing students with non-letter (special) grades so the
+         * instructor can review them before proceeding.
+         */
+        function showSpecialGradesModal(gradesDetails, specialGradeMap) {
+            // Only create the modal DOM element once
+            if (!document.getElementById('specialGradesModal')) {
+                const rows = specialGradeMap.map(row => `
+                    <tr>
+                        <td>${row[0]}</td>
+                        <td>${row[1]}</td>
+                        <td>${row[2]}</td>
+                        <td>${row[3]}</td>
+                    </tr>`).join('');
+
+                const modalHtml = `
+                <div class="modal fade" id="specialGradesModal" tabindex="-1"
+                     aria-labelledby="specialGradesModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="specialGradesModalLabel">Special Grades Found</h5>
+                        <h6 class="modal-title">
+                            For these students, update marks manually in the ERP CSV if needed.
+                        </h6>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="table-responsive">
+                          <table class="table table-bordered">
+                            <thead>
+                              <tr>
+                                <th>Student ID</th>
+                                <th>Grade</th>
+                                <th>Name</th>
+                                <th>Marks</th>
+                              </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" id="specialGradesOkBtn"
+                                class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            const modalEl = document.getElementById('specialGradesModal');
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+
+            // Proceed to histogram once the instructor acknowledges
+            document.getElementById('specialGradesOkBtn').onclick = function () {
+                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                window.open("histogram.html", "_self");
+            };
+        }
+    </script>
 </body>
 </html>
