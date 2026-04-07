@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <title>BITS Pilani Grade Moderator</title>
+</head>
+<body onload="defaultState()">
+    <div class="container-fluid mt-3">
+        <div class="row mb-3">
+            <div class="col text-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sortOption"
+                           id="sortNone" value="none" checked>
+                    <label class="form-check-label" for="sortNone">Original Order</label>
+                </div>
+            </div>
+            <div class="col text-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sortOption"
+                           id="sortCampus" value="campus">
+                    <label class="form-check-label" for="sortCampus">Sort by Campus</label>
+                </div>
+            </div>
+            <div class="col text-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sortOption"
+                           id="sortBranch" value="branch">
+                    <label class="form-check-label" for="sortBranch">Sort by Branch</label>
+                </div>
+            </div>
+            <div class="col text-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sortOption"
+                           id="sortBoth" value="both">
+                    <label class="form-check-label" for="sortBoth">Sort by Both</label>
+                </div>
+            </div>
+            <div class="col text-center">
+                <button class="btn btn-primary" id="exportBtn">Export</button>
+            </div>
+        </div>
+        <div class="row" style="height: calc(100vh - 120px);">
+            <div class="col-12">
+                <div style="height: 100%; overflow-y: auto;">
+                    <table class="table table-striped table-bordered" id="gradesTable"
+                           style="margin-bottom:0;">
+                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Constants ─────────────────────────────────────────────────────────────
+
+        /**
+         * BITS Pilani student ID is always exactly 13 characters:
+         *   [0..3]   year of admission  (4 digits,       e.g. "2021")
+         *   [4..7]   affiliation code   (4 alphanumeric, e.g. "A7PS" or "A7B4")
+         *              single degree: chars [4..5] = branch code, chars [6..7] = "PS"
+         *              dual degree:   chars [4..5] = branch1 code, chars [6..7] = branch2 code
+         *   [8..11]  roll number       (4 digits,       e.g. "0042")
+         *   [12]     campus            (1 letter:  H=Hyderabad, P=Pilani, G=Goa)
+         *
+         * ERP CSV column index of the student ID field:
+         */
+        const ERP_ID_COL = 3;
+
+        const CAMPUS_MAP = { 'H': 'Hyderabad', 'P': 'Pilani', 'G': 'Goa' };
+
+        const BRANCH_CODES = {
+            // First-degree UG programmes
+            'A1': 'B.E. Chemical',
+            'A2': 'B.E. Civil',
+            'A3': 'B.E. Electrical & Electronics',
+            'A4': 'B.E. Mechanical',
+            'A5': 'B.Pharm.',
+            'A7': 'B.E. Computer Science',
+            'A8': 'B.E. Electronics & Instrumentation',
+            'A9': 'B.E. Biotechnology',
+            'AA': 'B.E. Electronics & Communication',
+            'AB': 'B.E. Manufacturing',
+            'AC': 'B.E. Electronics & Computer Engg.',
+            'AD': 'B.E. Mathematics & Computing',
+            'AE': 'B.E. Architectural & Urban Engg.',
+            'AF': 'B.E. Chemical (Energy & Sustainability)',
+            'AG': 'B.E. Mechanical (Aerospace)',
+            'AH': 'B.E. Biotech (Applied Molecular Biology)',
+            'AI': 'B.E. Biomedical Sciences & Engg.',
+            'AJ': 'B.E. Environmental & Sustainability Engg.',
+            // MSc programmes
+            'B1': 'M.Sc. Biological Sciences',
+            'B2': 'M.Sc. Chemistry',
+            'B3': 'M.Sc. Economics',
+            'B4': 'M.Sc. Mathematics',
+            'B5': 'M.Sc. Physics',
+            'B6': 'M.Sc. Physics (Space Science)',
+            'B7': 'M.Sc. Semiconductor & Nanoscience',
+            'C2': 'M.Sc. General Studies',
+            'C5': 'M.Sc. Engineering Technology',
+            'C6': 'M.Sc. Information Systems',
+            'C7': 'M.Sc. Finance',
+            'C8': 'BBA (Honours)',
+            // Higher-degree / ME programmes (2-digit numeric codes)
+            '29': 'M.E. Biotechnology',
+            '01': 'M.E. Chemical',
+            '32': 'M.E. Chemical (Petroleum Engg.)',
+            '43': 'M.E. Civil (Structural Engg.)',
+            '30': 'M.E. Civil (Transportation Engg.)',
+            '44': 'M.E. Civil (Infrastructure Engg.)',
+            '11': 'M.E. Civil (Water Resources)',
+            '24': 'M.E. Communication Engg.',
+            '03': 'M.E. Computer Science',
+            '41': 'M.E. Design Engg.',
+            '31': 'M.E. Electrical (Power Electronics)',
+            '40': 'M.E. Embedded Systems',
+            '13': 'M.E. Information Security',
+            '42': 'M.E. Manufacturing Systems',
+            '06': 'M.E. Mechanical',
+            '48': 'M.E. Mechanical (Thermal Engg.)',
+            '23': 'M.E. Microelectronics',
+            '51': 'M.E. Sanitation Science',
+            '52': 'M.Phil. Liberal Studies',
+            '12': 'M.E. Software Systems',
+            '08': 'M.Pharm.',
+            '46': 'M.Pharm. (Pharmaceutics)',
+            '47': 'M.Pharm. (Pharmaceutical Chemistry)',
+            '53': 'M.Pharm. (Pharmacology)',
+            '49': 'M.B.A.',
+            '54': 'MBA (Business Analytics)',
+            '37': 'MPH',
+            '55': 'M.E. Environmental Engg.',
+        };
+
+        // ── ID parsing ────────────────────────────────────────────────────────────
+
+        /**
+         * Extract campus from a 13-character BITS student ID.
+         * Campus is always the last character (index 12).
+         *
+         * @param  {string} id  Student ID (will be trimmed).
+         * @return {string}     Full campus name, or "Campus-X" if unrecognised.
+         */
+        function getCampusFromID(id) {
+            const clean = (id || '').trim();
+            if (clean.length !== 13) return 'Unknown';
+            const letter = clean[12].toUpperCase();
+            return CAMPUS_MAP[letter] || ('Campus-' + letter);
+        }
+
+        /**
+         * Extract affiliation (branch / programme) from a 13-character BITS student ID.
+         *
+         * The 4-character affiliation field occupies indices [4..7]:
+         *   chars [4..5] = primary branch code  (always present)
+         *   chars [6..7] = "PS"  → single-degree student
+         *                  other → secondary branch code of a dual-degree student
+         *
+         * Returns both a raw sort key (the 4-char code, so sorting is consistent and
+         * groups students by primary branch first) and a human-readable display string.
+         *
+         * @param  {string} id
+         * @return {{ raw: string, display: string }}
+         */
+        function getAffiliationFromID(id) {
+            const clean = (id || '').trim();
+            if (clean.length !== 13) return { raw: '????', display: 'Unknown' };
+
+            const aff   = clean.slice(4, 8).toUpperCase();  // 4-char affiliation field
+            const code1 = aff.slice(0, 2);                  // primary branch
+            const code2 = aff.slice(2, 4);                  // secondary branch or "PS"
+
+            const name1 = BRANCH_CODES[code1] || code1;
+
+            if (code2 === 'PS') {
+                return { raw: aff, display: name1 };
+            }
+            // Dual degree
+            const name2 = BRANCH_CODES[code2] || code2;
+            return { raw: aff, display: name1 + ' / ' + name2 };
+        }
+
+        // ── Data setup ────────────────────────────────────────────────────────────
+
+        // Grade data passed from histogram.html via sessionStorage
+        const gradesToExport = JSON.parse(sessionStorage.getItem("gradeObject2"));
+
+        /**
+         * retCSV is a 2D array:
+         *   retCSV[0]   — array of column-header strings
+         *   retCSV[1..] — one array of cell strings per student row
+         *
+         * Filter out any blank/undefined trailing header entries that can appear
+         * when the ERP CSV has trailing commas.
+         */
+        const erpHeaders = gradesToExport.retCSV[0].filter(
+            h => h !== undefined && h.toString().trim() !== ''
+        );
+
+        /**
+         * Convert the raw 2D retCSV rows into plain objects keyed by header name,
+         * then attach the three derived fields (prefixed _ to avoid collisions):
+         *   _campus             — full campus name   (sort key for campus sort)
+         *   _affiliationRaw     — 4-char affiliation  (sort key for branch sort)
+         *   _affiliationDisplay — human-readable branch name(s) for the table column
+         *
+         * @return {Object[]}
+         */
+        function buildEnrichedData() {
+            return gradesToExport.retCSV.slice(1).map(row => {
+                const obj = {};
+                erpHeaders.forEach((h, i) => {
+                    obj[h] = (row[i] !== undefined ? row[i] : '');
+                });
+
+                const id = (row[ERP_ID_COL] || '').trim();
+                obj._campus             = getCampusFromID(id);
+                const aff               = getAffiliationFromID(id);
+                obj._affiliationRaw     = aff.raw;
+                obj._affiliationDisplay = aff.display;
+                return obj;
+            });
+        }
+
+        // Master data array (never mutated) — used as source for every sort
+        const enrichedData    = buildEnrichedData();
+        // Currently displayed (possibly sorted) data — used for export
+        let currentSortedData = [...enrichedData];
+
+        // ── Table rendering ───────────────────────────────────────────────────────
+
+        /**
+         * Clear and rebuild the HTML table from a data array.
+         * Shows all original ERP columns followed by the two derived columns.
+         *
+         * @param {Object[]} data  Enriched row objects in the desired display order.
+         */
+        function renderTable(data) {
+            if (!data || data.length === 0) return;
+
+            const table = document.getElementById('gradesTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            // Header row
+            const headerRow = document.createElement('tr');
+            [...erpHeaders, 'Campus', 'Branch / Programme'].forEach(label => {
+                const th = document.createElement('th');
+                th.textContent = label;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Data rows
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+
+                erpHeaders.forEach(h => {
+                    const td = document.createElement('td');
+                    td.textContent = row[h];
+                    tr.appendChild(td);
+                });
+
+                const tdCampus = document.createElement('td');
+                tdCampus.textContent = row._campus;
+                tr.appendChild(tdCampus);
+
+                const tdBranch = document.createElement('td');
+                tdBranch.textContent = row._affiliationDisplay;
+                tr.appendChild(tdBranch);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ── Sorting ───────────────────────────────────────────────────────────────
+
+        /**
+         * Sort a fresh copy of enrichedData by the chosen criterion, update
+         * currentSortedData, and re-render the table.
+         *
+         * Sort keys chosen:
+         *   campus  → _campus (alphabetical full name)
+         *   branch  → _affiliationRaw (4-char code, groups by primary then secondary branch)
+         *   both    → _campus then _affiliationRaw
+         *   none    → original ERP order (no sort)
+         *
+         * @param {string} option  'none' | 'campus' | 'branch' | 'both'
+         */
+        function sortData(option) {
+            let data = [...enrichedData];   // always start from original unsorted order
+
+            if (option === 'campus') {
+                data.sort((a, b) => a._campus.localeCompare(b._campus));
+
+            } else if (option === 'branch') {
+                data.sort((a, b) => a._affiliationRaw.localeCompare(b._affiliationRaw));
+
+            } else if (option === 'both') {
+                data.sort((a, b) => {
+                    const byCampus = a._campus.localeCompare(b._campus);
+                    return byCampus !== 0
+                        ? byCampus
+                        : a._affiliationRaw.localeCompare(b._affiliationRaw);
+                });
+            }
+            // 'none' → data stays in enrichedData order
+
+            currentSortedData = data;
+            renderTable(data);
+        }
+
+        // ── Event listeners ───────────────────────────────────────────────────────
+
+        document.querySelectorAll('input[name="sortOption"]').forEach(radio => {
+            radio.addEventListener('change', function () { sortData(this.value); });
+        });
+
+        /**
+         * Export the currently displayed rows as a CSV file.
+         * Only original ERP columns are written (Campus / Branch are display-only).
+         * The row order in the file matches the current sort order in the table.
+         */
+        document.getElementById('exportBtn').addEventListener('click', function () {
+            if (!currentSortedData || currentSortedData.length === 0) return;
+
+            const csvRows = [erpHeaders.join(',')];
+            currentSortedData.forEach(row => {
+                const line = erpHeaders.map(h => {
+                    const val = (row[h] !== undefined ? row[h] : '').toString();
+                    return `"${val.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(line.join(','));
+            });
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = gradesToExport.retCSVName || 'grades.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // ── Init ──────────────────────────────────────────────────────────────────
+
+        /** Render table in original ERP order on page load. */
+        function defaultState() {
+            renderTable(enrichedData);
+        }
+    </script>
+</body>
+</html>

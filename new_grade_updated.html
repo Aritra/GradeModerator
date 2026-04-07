@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <title>BITS Pilani Grade Moderator</title>
+    <style>
+        /* Additional style for the paste area */
+        .paste-area {
+            font-family: monospace;
+            resize: vertical;
+        }
+        .info-paste {
+            font-size: 0.85rem;
+            color: #2c7da0;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body onload="defaultState()">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+                <div style="padding-top:15px; padding-bottom:15px;">
+                    <h1>Create New Grades</h1>
+                    <p>
+                        Paste marks data copied from Excel or Google Sheets.<br>
+                        <strong>First column = Student ID, second column = Marks.</strong><br>
+                        Then upload the ERP CSV file.
+                    </p>
+                </div>
+                <img src="imgs/separator.svg" class="mx-auto d-block" style="width:100%">
+
+                <!-- Subject name input -->
+                <div style="padding-top: 15px;">
+                    <div class="row">
+                        <div class="col-sm-3"><p>Enter Subject Name:</p></div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="subjectName"
+                                onkeyup="checkSubjectName();"
+                                placeholder="Subject name only (without subject code)" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maximum marks input -->
+                <div style="padding-top: 15px;">
+                    <div class="row">
+                        <div class="col-sm-3"><p>Enter Maximum Marks:</p></div>
+                        <div class="col-sm-9">
+                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks"
+                                placeholder="Integer input only, minimum value 0" required
+                                oninput="checkSubjectMarks();">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Paste area for marks data (replaces CSV upload and column selectors) -->
+                <div style="padding-top: 15px;">
+                    <label for="pasteMarksData" class="form-label">Paste marks data (Excel / Google Sheets)</label>
+                    <textarea id="pasteMarksData" class="form-control paste-area" rows="6"
+                        placeholder="Copy cells from Excel or Google Sheets, then click here and press Ctrl+V (Cmd+V on Mac)&#10;The first column should be Student ID, the second column Marks."></textarea>
+                    <div class="info-paste">✅ Empty rows at the end are automatically removed. Data is taken from the first two columns only.</div>
+                </div>
+
+                <!-- Starting Row selector (same as before) -->
+                <div style="padding-top: 15px;">
+                    <select id="startSelector" onchange="chooseStartRow();" class="form-select">
+                        <option hidden>Starting Row number</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                        <option>4</option>
+                    </select>
+                </div>
+
+                <!-- Destination (ERP) CSV upload form (unchanged) -->
+                <div style="padding-top: 15px;">
+                    <form id="formDES">
+                        <input type="file" id="UploadDESFile" accept=".csv" style="width: 79.5%;" />
+                        <input type="submit" id="desSubmitBtn" class="btn btn-primary"
+                            name="submit" style="width: 20%;" />
+                    </form>
+                </div>
+
+                <!-- Launch histogram button (unchanged) -->
+                <div style="padding-top: 15px;">
+                    <button type="button" class="btn btn-primary" id="showHistogram"
+                        onclick="openHistogram()" style="width:100%; margin:auto;">
+                        Show Histogram
+                    </button>
+                </div>
+
+                <!-- Debug / status text (unchanged) -->
+                <div style="padding-top: 15px;">
+                    <p id="demo"></p>
+                </div>
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // ── DOM references ────────────────────────────────────────────────────────
+        const formDES       = document.getElementById("formDES");
+        const csvDESFile    = document.getElementById("UploadDESFile");
+        const startChooser  = document.getElementById("startSelector");
+        const showHistBtn   = document.getElementById("showHistogram");
+        const desSubmit     = document.getElementById("desSubmitBtn");
+        const subjectName   = document.getElementById("subjectName");
+        const subjectMarks  = document.getElementById("subjectMarks");
+        const pasteArea     = document.getElementById("pasteMarksData");
+
+        // ── State ─────────────────────────────────────────────────────────────────
+        let chosenIDIdx     = 0;      // always first column (0)
+        let chosenMarksIdx  = 1;      // always second column (1)
+        let chosenStartRow  = -1;     // zero‑based, set by user
+        let subjectNameTxt  = "";
+        let subjectMarksVal = 0;
+        let subjectCode     = "";
+        let desFileName     = "";
+        let csvSRCtxt       = [];     // 2D array from pasted marks data
+        let csvDEStxt       = [];     // 2D array from ERP (destination) CSV
+
+        // ERP CSV column indices — must not change; these are the ERP format constants
+        const ERP_ID_COL    = 3;
+        const ERP_GRADE_COL = 7;
+        const ERP_NAME_COL  = 4;
+
+        // Special grade codes that mean the student is not letter-graded
+        const SPECIAL_GRADES = new Set(["W", "I", "NC", "GA", "RC", "DP", "TGA", "RRA"]);
+
+        // ── Initialisation ────────────────────────────────────────────────────────
+
+        /** Disable controls that require prior steps to be complete. */
+        function defaultState() {
+            startChooser.disabled = true;
+            csvDESFile.disabled   = true;
+            desSubmit.disabled    = true;
+            showHistBtn.disabled  = true;
+        }
+
+        // ── Progressive enable helpers ────────────────────────────────────────────
+
+        function enableStartselector() {
+            startChooser.disabled = false;
+        }
+
+        function enableDesSelector() {
+            csvDESFile.disabled = false;
+            desSubmit.disabled  = false;
+        }
+
+        function enableGoBtn() {
+            showHistBtn.disabled = false;
+        }
+
+        // ── Paste handler (replaces CSV upload & column selection) ─────────────────
+
+        /**
+         * Parse pasted tab‑separated text, remove trailing empty rows,
+         * and store the result in csvSRCtxt. Assumes first two columns are ID and Marks.
+         * Then enable the start row selector.
+         */
+        function handlePaste(e) {
+            // Get plain text from clipboard
+            let pastedText = '';
+            if (e.clipboardData && e.clipboardData.getData) {
+                pastedText = e.clipboardData.getData('text/plain');
+            } else {
+                // Fallback (should not happen in modern browsers)
+                pastedText = pasteArea.value;
+            }
+
+            if (!pastedText || pastedText.trim() === '') {
+                document.getElementById("demo").innerHTML = "⚠️ No data pasted.";
+                return;
+            }
+
+            // Split into rows (handles Windows \r\n and Unix \n)
+            const rawRows = pastedText.split(/\r?\n/);
+            // Convert each row into array of columns (tab separated)
+            let tableData = rawRows.map(row => row.split('\t'));
+
+            // Helper: check if a row is completely empty (all cells empty or whitespace)
+            function isRowEmpty(row) {
+                return row.every(cell => cell.trim() === '');
+            }
+
+            // Find the last non‑empty row index
+            let lastNonEmptyIdx = -1;
+            for (let i = 0; i < tableData.length; i++) {
+                if (!isRowEmpty(tableData[i])) {
+                    lastNonEmptyIdx = i;
+                }
+            }
+
+            if (lastNonEmptyIdx === -1) {
+                document.getElementById("demo").innerHTML = "⚠️ No non‑empty rows found in pasted data.";
+                return;
+            }
+
+            // Truncate to last non‑empty row (remove trailing empty rows)
+            tableData = tableData.slice(0, lastNonEmptyIdx + 1);
+
+            // Optional: also remove leading empty rows? Not strictly required, but cleaner.
+            // Remove any leading empty rows as well (common when copying whole columns)
+            while (tableData.length > 0 && isRowEmpty(tableData[0])) {
+                tableData.shift();
+            }
+
+            if (tableData.length === 0) {
+                document.getElementById("demo").innerHTML = "⚠️ No data after removing empty rows.";
+                return;
+            }
+
+            // Ensure each row has at least two columns (ID and Marks)
+            const minCols = 2;
+            for (let i = 0; i < tableData.length; i++) {
+                if (tableData[i].length < minCols) {
+                    // Pad missing columns with empty strings
+                    while (tableData[i].length < minCols) tableData[i].push('');
+                }
+            }
+
+            // Store the processed data
+            csvSRCtxt = tableData;
+
+            // Reset start row selection and disable ERP upload until user picks a start row
+            startChooser.selectedIndex = 0;   // back to "Starting Row number" (hidden)
+            chosenStartRow = -1;
+            startChooser.disabled = false;    // now enabled
+            // Disable ERP upload until start row is chosen
+            csvDESFile.disabled = true;
+            desSubmit.disabled = true;
+            showHistBtn.disabled = true;
+
+            // Show confirmation
+            const rowCount = csvSRCtxt.length;
+            const colCount = csvSRCtxt[0].length;
+            document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, ${colCount} columns. First column = ID, second column = Marks. Choose starting row.`;
+        }
+
+        // Attach paste listener to the textarea
+        pasteArea.addEventListener('paste', (e) => {
+            e.preventDefault();
+            handlePaste(e);
+            // Also update the textarea content (optional)
+            const pasted = e.clipboardData.getData('text/plain');
+            pasteArea.value = pasted;
+        });
+
+        // Also allow manual typing? Not needed, but clear the demo message on input
+        pasteArea.addEventListener('input', () => {
+            if (pasteArea.value === '') {
+                csvSRCtxt = [];
+                startChooser.disabled = true;
+                csvDESFile.disabled = true;
+                desSubmit.disabled = true;
+                showHistBtn.disabled = true;
+                document.getElementById("demo").innerHTML = "";
+            }
+        });
+
+        // ── Start row selection ───────────────────────────────────────────────────
+
+        /** User chose the starting data row (1‑indexed in dropdown, converted to 0‑based). */
+        function chooseStartRow() {
+            const idx = startChooser.selectedIndex;
+            if (idx <= 0) {
+                chosenStartRow = -1;
+                csvDESFile.disabled = true;
+                desSubmit.disabled = true;
+                showHistBtn.disabled = true;
+                return;
+            }
+            chosenStartRow = idx - 1;   // because index 0 is the hidden placeholder
+            // Enable ERP file upload only after start row is chosen AND we have pasted data
+            if (csvSRCtxt && csvSRCtxt.length > 0) {
+                enableDesSelector();
+                document.getElementById("demo").innerHTML += `<br>📌 Starting row set to row ${idx} (0‑based index ${chosenStartRow}). Now upload ERP CSV.`;
+            } else {
+                document.getElementById("demo").innerHTML = "⚠️ Please paste marks data first, then choose starting row.";
+            }
+        }
+
+        // ── Validation ────────────────────────────────────────────────────────────
+
+        function checkSubjectName() {
+            subjectNameTxt = subjectName.value.trim();
+            subjectName.classList.toggle('border-danger', subjectNameTxt === "");
+        }
+
+        function checkSubjectMarks() {
+            subjectMarksVal = parseInt(subjectMarks.value, 10);
+            subjectMarks.classList.toggle('border-danger', !(subjectMarksVal > 0));
+        }
+
+        // ── Special grade check ───────────────────────────────────────────────────
+
+        function isSpecialGrade(gradeKey) {
+            return SPECIAL_GRADES.has(gradeKey);
+        }
+
+        // ── CSV parsing for ERP file (unchanged) ───────────────────────────────────
+
+        function csvToArray(csv) {
+            return csv.split("\n").map(row => row.split(","));
+        }
+
+        // ── ERP file upload handler (unchanged) ───────────────────────────────────
+
+        formDES.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const input = csvDESFile.files[0];
+            if (!input) return;
+
+            // Extract subject code from the ERP filename convention: ..._CODE_NAME_...csv
+            desFileName  = input.name.split(/(\\|\/)/g).pop();
+            const parts  = desFileName.split("_");
+            subjectCode  = parts[1] + " " + parts[2];
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                csvDEStxt = csvToArray(e.target.result);
+                enableGoBtn();
+                document.getElementById("demo").innerHTML += `<br>📂 ERP file loaded: ${desFileName} (${csvDEStxt.length} rows). Ready to show histogram.`;
+            };
+            reader.readAsText(input);
+        });
+
+        // ── Main action: open histogram (modified to use fixed column indices) ─────
+
+        function openHistogram() {
+            // Validate subject name and marks
+            subjectNameTxt  = subjectName.value.trim();
+            subjectMarksVal = parseInt(subjectMarks.value, 10);
+
+            if (subjectNameTxt === "") {
+                subjectName.classList.add('border-danger');
+            }
+            if (isNaN(subjectMarksVal) || subjectMarksVal <= 0) {
+                subjectMarks.classList.add('border-danger');
+            }
+            if (subjectNameTxt === "" || isNaN(subjectMarksVal) || subjectMarksVal <= 0) {
+                document.getElementById("demo").innerHTML = "❌ Please fill subject name and valid maximum marks.";
+                return;
+            }
+
+            // Check that we have pasted marks data
+            if (!csvSRCtxt || csvSRCtxt.length === 0) {
+                document.getElementById("demo").innerHTML = "❌ No marks data pasted. Please paste from Excel/Google Sheets.";
+                return;
+            }
+
+            // Check that start row is chosen
+            if (chosenStartRow < 0 || chosenStartRow >= csvSRCtxt.length) {
+                document.getElementById("demo").innerHTML = "❌ Please select a valid starting row number.";
+                return;
+            }
+
+            // Check that ERP data is loaded
+            if (!csvDEStxt || csvDEStxt.length === 0) {
+                document.getElementById("demo").innerHTML = "❌ Please upload the ERP CSV file.";
+                return;
+            }
+
+            // Build mark map: [studentID, marks, studentName]
+            const specialGradeMap = [];
+            const markMap         = [];
+            const specialGrades   = [0, 0, 0, 0, 0, 0, 0, 0];
+            const keepGrades      = [true, true, true, true, true, true, true, true];
+            const gradeCutOffs    = [];  // empty → histogram will compute even divisions
+
+            const erpRows = csvDEStxt.length;
+            const srcRows = csvSRCtxt.length;
+
+            // Primary loop: iterate ERP rows so every ERP student is accounted for
+            for (let j = 1; j < erpRows; j++) {
+                const idFromERP   = csvDEStxt[j][ERP_ID_COL];
+                const nameFromERP = csvDEStxt[j][ERP_NAME_COL];
+                if (typeof idFromERP === "undefined") continue;
+
+                const cleanID   = idFromERP.trim();
+                const cleanName = nameFromERP.trim();
+                let studentFound = false;
+
+                // Search source (pasted) data for a matching student ID
+                for (let i = chosenStartRow; i < srcRows; i++) {
+                    const tempID = csvSRCtxt[i][chosenIDIdx];   // column 0 = ID
+                    if (typeof tempID === "undefined") continue;
+
+                    const studentID    = tempID.trim();
+                    const studentMarks = parseInt(csvSRCtxt[i][chosenMarksIdx], 10); // column 1 = marks
+
+                    if (studentID === cleanID) {
+                        studentFound     = true;
+                        const asPerERP   = csvDEStxt[j][ERP_GRADE_COL].trim();
+                        if (typeof asPerERP === "undefined") break;
+
+                        if (!isSpecialGrade(asPerERP)) {
+                            // Normal graded student → goes into the histogram mark map
+                            markMap.push([studentID, studentMarks, cleanName]);
+                            console.log(`${studentID} pushed to normal list`);
+                        } else {
+                            // Special grade student — listed separately for review
+                            specialGradeMap.push([studentID, asPerERP, cleanName, studentMarks]);
+                            console.log(`${studentID} pushed to special grades (${asPerERP})`);
+                        }
+                        break;
+                    }
+                }
+
+                if (!studentFound) {
+                    // Student in ERP but not in pasted data (e.g., withdrew before exam)
+                    const asPerERP = csvDEStxt[j][ERP_GRADE_COL].trim();
+                    console.log(`Student ${cleanID} not found in pasted marks data`);
+                    specialGradeMap.push([cleanID, asPerERP, cleanName, 0]);
+                }
+            }
+
+            console.log(`Mark map length: ${markMap.length}`);
+            console.log(`Special grade map length: ${specialGradeMap.length}`);
+
+            // Build the grade object to pass to histogram.html via sessionStorage
+            const gradesDetails = {
+                code:        subjectCode,
+                subjectName: subjectNameTxt,
+                fullMarks:   subjectMarksVal,
+                mMap:        markMap,
+                retCSV:      csvDEStxt,
+                specialG:    specialGrades,
+                specialGMap: specialGradeMap,
+                keepG:       keepGrades,
+                gCutOffs:    gradeCutOffs,
+                retCSVName:  desFileName
+            };
+
+            // If there are special grades, show them for the instructor to review
+            if (specialGradeMap.length > 0) {
+                showSpecialGradesModal(gradesDetails, specialGradeMap);
+            } else {
+                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                window.open("histogram.html", "_self");
+            }
+        }
+
+        /**
+         * Display a modal listing students with non-letter (special) grades so the
+         * instructor can review them before proceeding.
+         */
+        function showSpecialGradesModal(gradesDetails, specialGradeMap) {
+            // Only create the modal DOM element once
+            if (!document.getElementById('specialGradesModal')) {
+                const rows = specialGradeMap.map(row => `
+                    <tr>
+                        <td>${escapeHtml(row[0])}</td>
+                        <td>${escapeHtml(row[1])}</td>
+                        <td>${escapeHtml(row[2])}</td>
+                        <td>${row[3]}</td>
+                    </tr>`).join('');
+
+                const modalHtml = `
+                <div class="modal fade" id="specialGradesModal" tabindex="-1"
+                     aria-labelledby="specialGradesModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="specialGradesModalLabel">Special Grades Found</h5>
+                        <h6 class="modal-title">
+                            For these students, update marks manually in the ERP CSV if needed.
+                        </h6>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="table-responsive">
+                          <table class="table table-bordered">
+                            <thead>
+                              <tr>
+                                <th>Student ID</th>
+                                <th>Grade</th>
+                                <th>Name</th>
+                                <th>Marks</th>
+                              </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" id="specialGradesOkBtn"
+                                class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            const modalEl = document.getElementById('specialGradesModal');
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+
+            // Proceed to histogram once the instructor acknowledges
+            document.getElementById('specialGradesOkBtn').onclick = function () {
+                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                window.open("histogram.html", "_self");
+            };
+        }
+
+        // Helper to escape HTML in modal (avoids injection)
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+    </script>
+</body>
+</html>
