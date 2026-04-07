@@ -1,37 +1,102 @@
-# BITS Pilani Grade Moderator
+# 🎓 BITS Pilani Grade Moderator
 
-This repository contains the code for the BITS Pilani Grade Moderator.
+A simple, browser-based tool to help instructors **upload marks, visualize distributions, assign grades, and export results** — all without installing anything.
 
-## How to Use
+---
 
-To use this application, follow these steps:
+## 🚀 Features
 
-1.  **Download the repository as a ZIP file:**
-    * Click on the "Code" button on the repository page.
-    * Select "Download ZIP".
+### 🆕 New (Enhanced Workflow)
+- ✨ **Paste directly from Excel / Google Sheets** (no CSV needed!)
+- 🧹 Cleaner and faster grading interface (`New Grade - Simpler`)
+- ⚡ Automatic cleanup of empty rows and formatting
 
-2.  **Extract the ZIP file:**
-    * Once the download is complete, extract the contents of the ZIP file to a location on your computer (Windows, Linux, or macOS).
+### 📊 Smart Grading & Analytics
+- Interactive **histogram-based grading**
+- 📈 Grade distribution visualization (bar + pie charts)
+- 🔍 Search students instantly
+- ✏️ Edit grades manually when needed
 
-3.  **Open `index.html`:**
-    * Navigate to the extracted folder.
-    * Double-click on the `index.html` file. This will open the main page of the application in your web browser.
+### 📂 Flexible Export Options
+- 💾 Export ERP-ready CSV
+- 🗂️ Save your work as JSON (resume later)
+- 🖨️ Print reports as PDF
 
-**Recommended Browser:** For the best experience, it is recommended to use **Google Chrome**. However, the application is also compatible with Mozilla Firefox, Microsoft Edge, and Safari.
+### 🔀 Sorting & Organization (NEW)
+- Sort students by:
+  - 🏫 Campus  
+  - 🎓 Branch  
+  - 🔀 Both (Campus + Branch)
+- 📤 Or export directly in original order (old method still supported!)
 
-## Tutorial Video
+---
 
-For a visual guide on how to use the application, you can watch the following video:
+## 🧭 How to Use
 
-[Tutorial Video](https://www.youtube.com/watch?v=-dX6KwiFTj4)
+### 1️⃣ Download the Repository
+- Click **Code → Download ZIP**
+- Extract it anywhere on your system
 
-## Issues and Support
+### 2️⃣ Open the Application
+- Open `index.html` in your browser
 
-If you encounter any issues or have suggestions, please feel free to:
+### 3️⃣ Choose a Workflow
 
-* **Post an issue** on the GitHub repository's "Issues" tab.
-* **Email me directly** at <a href="mailto:a.mukherjee@hyderabad.bits-pilani.ac.in">a.mukherjee@hyderabad.bits-pilani.ac.in</a>.
+#### ✅ Recommended: *New Grade (Simpler)*
+- Paste marks directly from Excel
+- Upload ERP CSV
+- Generate histogram and assign grades
 
-## License
+#### 🧾 Alternative: *New Grade (CSV-based)*
+- Upload marks CSV manually
+- Select columns and proceed
 
-This project is licensed under the [MIT License](LICENSE) - see the [LICENSE.md](LICENSE.md) file for details.
+#### 📂 View Grades
+- Load a previously saved JSON file
+
+---
+
+## 🌐 Browser Support
+
+✅ Best experience: **Google Chrome**  
+Also works on:
+- Firefox
+- Edge
+- Safari
+
+---
+
+## 🎥 Tutorial Video
+
+Need a quick walkthrough?
+
+👉 https://www.youtube.com/watch?v=-dX6KwiFTj4
+
+---
+
+## 💡 Tips for First-Time Users
+
+- ⭐ Use the **Simpler version** (paste-based workflow)
+- 💾 Always save a JSON backup
+- 🧪 Try with a small dataset first
+
+---
+
+## 🛠️ Issues & Support
+
+If something breaks (or you have ideas!):
+
+- 🐛 Open an issue on GitHub  
+- 📧 Email:  
+  <a href="mailto:a.mukherjee@hyderabad.bits-pilani.ac.in">a.mukherjee@hyderabad.bits-pilani.ac.in</a>
+
+---
+
+## 📜 License
+
+Licensed under the **MIT License**  
+See `LICENSE.md` for details.
+
+---
+
+✨ Built to make grading smoother, faster, and less painful.
