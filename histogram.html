@@ -273,10 +273,18 @@
         #ncCalcModal .nc-list { max-height: 12rem; overflow-y: auto; margin-top: .5rem; font-size: .85rem; }
         #ncCalcModal .nc-list td, #ncCalcModal .nc-list th { padding: 0 .75rem 0 0; }
         #ncTopK, #ncTopPct { width: 4.5em; display: inline-block; }
-        /* Red square "mark the NC zone as NC" button, left of NC Calculator */
-        #ncApplyBtn { flex: 0 0 auto; aspect-ratio: 1 / 1; padding: 0; display: flex;
-                      align-items: center; justify-content: center; }
-        #ncApplyBtn svg { width: 55%; height: 55%; }
+        /* Red round "mark the NC zone as NC" button. It sits outside the NC Calculator
+           column, to its left, so NC Calculator keeps the full width of the other buttons;
+           right = column width + half a gutter puts it one gutter (the gap between the
+           other buttons) left of the NC Calculator button. */
+        #ncSlot { position: relative; }
+        #ncApplyBtn { position: absolute; top: 0; right: calc(100% + var(--bs-gutter-x) * .5);
+                      aspect-ratio: 1 / 1; padding: 0; border-radius: 50%;
+                      display: flex; align-items: center; justify-content: center; }
+        #ncApplyBtn svg { width: 50%; height: 50%; }
+        /* NC Calculator: same dark orange as the Help button on the home page */
+        .btn-dark-orange { background-color: #cc7000; border-color: #cc7000; color: #fff; }
+        .btn-dark-orange:hover, .btn-dark-orange:focus { background-color: #a85c00; border-color: #a85c00; color: #fff; }
         #ncApplyModal .nc-backup-note { text-decoration: underline; font-size: .85rem; }
         #ncApplyModal .file-prefix { display: inline-block; font-weight: bold; }   /* underline would hide the underscores */
         #sgWarning { color: #c00000; font-weight: bold; font-size: .8rem; margin: 0; }
@@ -566,7 +574,7 @@
                 </div>
                 <div class="col-sm-10">
                     <div class="row">
-                        <div class="col-sm-2 d-flex gap-1">
+                        <div class="col-sm-2" id="ncSlot">
                             <!-- Mark everyone in the NC zone as NC (openNCApply) -->
                             <button type="button" id="ncApplyBtn" class="btn btn-danger btn-xs"
                                     onclick="openNCApply();"
@@ -575,9 +583,9 @@
                                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13"
                                      stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
                             </button>
-                            <button type="button" class="btn btn-secondary btn-xs"
+                            <button type="button" class="btn btn-dark-orange btn-xs"
                                     onclick="openNCCalc();"
-                                    style="padding: 5px; flex: 1 1 auto; min-width: 0;">
+                                    style="padding: 5px; width:100%">
                                 NC Calculator
                             </button>
                         </div>
