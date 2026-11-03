@@ -199,6 +199,10 @@
         <li><b>Click a bar</b> to see the students with that mark and the grade they currently get.</li>
     </ul>
     <p>The page scales with your screen: text, buttons and the chart grow or shrink with the window.</p>
+    <p>While the page is opening, a <b>spinning circle</b> with “Loading grades and drawing the histogram…”
+       is shown; it disappears as soon as the histogram is drawn. If there is nothing to load (for example the
+       page was opened from a bookmark or in a new tab) or something goes wrong, the circle is replaced by a
+       message with a link back to the home page.</p>
 </section>
 
 <section class="help-section" id="cutoffs">
@@ -355,8 +359,10 @@
         <dt>I changed a grade to NC by mistake</dt>
         <dd>Changes in Search/Edit Grades cannot be undone on the page. Open the <code>AUTO_BACKUP_…json</code>
             file that was downloaded when you confirmed the change (or any JSON saved before it) with View Grades.</dd>
-        <dt>The page has no styling or the chart does not appear</dt>
-        <dd>Check your internet connection; the page loads Bootstrap and Chart.js from the internet.</dd>
+        <dt>The page has no styling, the chart does not appear, or the loading circle shows an error</dt>
+        <dd>Check your internet connection; the page loads Bootstrap and Chart.js from the internet. Then reload
+            the page. “No grades are loaded in this tab” means the histogram page was opened directly: start from
+            New Grade or View Grades on the home page.</dd>
     </dl>
 </section>
 
