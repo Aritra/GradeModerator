@@ -25,14 +25,16 @@
             background-color: #a85c00;
             color: white;
         }
-        .btn-dark-red {
-    	    background-color: #8B0000;  /* dark red */
-            color: white;
+        /*
+         * Button row: inside the same col-sm-10 as the art, with margins equal to the
+         * art's blank edges (measured: 6.45% left, 7.65% right of the image width),
+         * so the row lines up with the visible artwork end to end.
+         */
+        .home-buttons {
+            display: flex; flex-wrap: wrap; gap: 1rem;
+            margin: 0 7.65% 10px 6.45%;
         }
-        .btn-dark-red:hover {
-            background-color: #6e0000;
-            color: white;
-        }
+        .home-buttons .btn { flex: 1 1 0; min-width: 9rem; }
     </style>
 </head>
 <body>
@@ -45,26 +47,26 @@
             <div class="col-sm-1"></div>
         </div>
 
-        <!-- Three buttons evenly spaced using Bootstrap grid -->
-        <div class="row justify-content-center">
-            <div class="col-sm-3 text-center" style="margin-bottom: 10px;">
-                <button type="button" class="btn btn-primary btn-lg"
-                    onclick="location.href='new_grade.html'" style="width:100%;">
-                    New Grades
-                </button>
+        <!-- Three equal buttons, small gaps, spanning the art above end to end -->
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <div class="home-buttons">
+                    <button type="button" class="btn btn-primary btn-lg"
+                        onclick="location.href='new_grade_updated.html'">
+                        New Grade
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg"
+                        onclick="location.href='view_grade.html'">
+                        View Grades
+                    </button>
+                    <button type="button" class="btn btn-dark-orange btn-lg"
+                        onclick="window.open('help.html', '_blank')">
+                        Help
+                    </button>
+                </div>
             </div>
-            <div class="col-sm-3 text-center" style="margin-bottom: 10px;">
-                <button type="button" class="btn btn-dark-red btn-lg"
-                    onclick="location.href='new_grade_updated.html'" style="width:100%;">
-                    New Grade (Simpler - Recommended)
-                </button>
-            </div>
-            <div class="col-sm-3 text-center" style="margin-bottom: 10px;">
-                <button type="button" class="btn btn-success btn-lg"
-                    onclick="location.href='view_grade.html'" style="width:100%;">
-                    View Grades
-                </button>
-            </div>
+            <div class="col-sm-1"></div>
         </div>
     </div>
 
@@ -82,4 +84,4 @@
     </p>
     </div>
 </body>
-</html>s
+</html>
