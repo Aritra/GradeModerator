@@ -272,7 +272,7 @@
         #ncCalcModal .nc-result .nc-line { font-size: 1.15rem; font-weight: bold; color: #a00000; }
         #ncCalcModal .nc-list { max-height: 12rem; overflow-y: auto; margin-top: .5rem; font-size: .85rem; }
         #ncCalcModal .nc-list td, #ncCalcModal .nc-list th { padding: 0 .75rem 0 0; }
-        #ncTopK, #ncTopPct { width: 4.5em; display: inline-block; }
+        #ncTopK, #ncTopPct, #ncMedPct { width: 4.5em; display: inline-block; }
         /* Red round "mark the NC zone as NC" button. It sits outside the NC Calculator
            column, to its left, so NC Calculator keeps the full width of the other buttons;
            right = column width + half a gutter puts it one gutter (the gap between the
@@ -701,7 +701,10 @@
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="ncRule" id="ncRuleMedian"
                                value="median" onchange="onNCCalcChange();">
-                        <label class="form-check-label" for="ncRuleMedian">40% of the median marks</label>
+                        <input type="number" id="ncMedPct" class="form-control form-control-sm"
+                               min="1" max="100" step="any" value="40" aria-label="Percentage of the median"
+                               oninput="onNCCalcChange();" onfocus="ncRuleMedian.checked = true; onNCCalcChange();">
+                        <label class="form-check-label" for="ncRuleMedian">% of the median marks</label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="ncRule" id="ncRuleTopK"
@@ -840,7 +843,8 @@
 
     // NC Calculator: chosen rule, K and percentage for the top-K rule, and whether the
     // NC zone is shaded on the histogram (saved in the grade object as ncZone)
-    let ncSettings         = { rule: 'median', k: 3, pct: 30, show: false };
+    // (medPct: percentage of the median; pct: percentage of the top-K average)
+    let ncSettings         = { rule: 'median', medPct: 40, k: 3, pct: 30, show: false };
 
     let markLowest         = 10000;
     let markHighest        = 0;
@@ -1971,19 +1975,20 @@
 
     // =============================================================================
     // NC CALCULATOR
-    // Two rules for the NC line: 40% of the median marks, or a percentage (30 to
-    // start with, editable) of the average of the top K students. Students with marks below the line are NC candidates.
+    // Two rules for the NC line: a percentage of the median marks (40 to start
+    // with), or a percentage (30 to start with) of the average of the top K
+    // students; both percentages and K are editable. Students with marks below the line are NC candidates.
     // The marks used are the letter-graded students plus those already given NC
     // (so awarding NC in Search/Edit Grades does not move the line); W and the
     // other non-letter grades are left out. Optionally the part of the histogram
     // left of the line is shaded light red (drawNCZone, via the chart plugin).
     // =============================================================================
-    const NC_MEDIAN_SHARE = 0.4;
     const ncCalcModal  = document.getElementById('ncCalcModal');
     const ncRuleMedian = document.getElementById('ncRuleMedian');
     const ncRuleTopK   = document.getElementById('ncRuleTopK');
     const ncTopK       = document.getElementById('ncTopK');
     const ncTopPct     = document.getElementById('ncTopPct');
+    const ncMedPct     = document.getElementById('ncMedPct');
     const ncZoneSwitch = document.getElementById('ncZoneSwitch');
     const ncCalcResult = document.getElementById('ncCalcResult');
 
@@ -2017,10 +2022,12 @@
             return { value: pct / 100 * avg,
                      explain: `Average of the top ${k} = ${fmtMarks(avg)}; ${fmtMarks(pct)}% of it` };
         }
+        const medPct = ncSettings.medPct;
+        if (!(medPct > 0 && medPct <= 100)) return { error: 'The percentage must be more than 0 and at most 100.' };
         const mid = Math.floor(n / 2);
         const med = n % 2 ? marks[mid] : (marks[mid - 1] + marks[mid]) / 2;
-        return { value: NC_MEDIAN_SHARE * med,
-                 explain: `Median of ${n} students = ${fmtMarks(med)}; 40% of it` };
+        return { value: medPct / 100 * med,
+                 explain: `Median of ${n} students = ${fmtMarks(med)}; ${fmtMarks(medPct)}% of it` };
     }
 
     /** Fill the result box: the NC line and the students below it. */
@@ -2054,6 +2061,7 @@
         ncRuleTopK.checked   = ncSettings.rule === 'topk';
         ncTopK.value         = ncSettings.k;
         ncTopPct.value       = ncSettings.pct;
+        ncMedPct.value       = ncSettings.medPct;
         ncZoneSwitch.checked = ncSettings.show;
         renderNCResult();
         bootstrap.Modal.getOrCreateInstance(ncCalcModal).show();
@@ -2064,6 +2072,7 @@
         ncSettings = {
             rule: ncRuleTopK.checked ? 'topk' : 'median',
             k:    Number(ncTopK.value),
+            medPct: Number(ncMedPct.value),
             pct:  Number(ncTopPct.value),
             show: ncZoneSwitch.checked
         };
