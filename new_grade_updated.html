@@ -47,7 +47,7 @@
                     <div class="row">
                         <div class="col-sm-3"><p>Enter Subject Name:</p></div>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" id="subjectName"
+                            <input type="text" class="form-control" id="subjectName" autocomplete="off"
                                 onkeyup="checkSubjectName();"
                                 placeholder="Subject name only (without subject code)" required>
                         </div>
@@ -59,7 +59,7 @@
                     <div class="row">
                         <div class="col-sm-3"><p>Enter Maximum Marks:</p></div>
                         <div class="col-sm-9">
-                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks"
+                            <input type="number" min="0" step="1" class="form-control" id="subjectMarks" autocomplete="off"
                                 placeholder="Integer input only, minimum value 0" required
                                 oninput="checkSubjectMarks();">
                         </div>
@@ -69,7 +69,7 @@
                 <!-- NEW: Paste area for marks data (replaces CSV upload and column selectors) -->
                 <div style="padding-top: 15px;">
                     <label for="pasteMarksData" class="form-label">Paste marks data (Excel / Google Sheets)</label>
-                    <textarea id="pasteMarksData" class="form-control paste-area" rows="6"
+                    <textarea id="pasteMarksData" class="form-control paste-area" rows="6" autocomplete="off"
                         placeholder="Copy cells from Excel or Google Sheets, then click here and press Ctrl+V (Cmd+V on Mac)&#10;The first column should be Student ID, the second column Marks."></textarea>
                     <div class="info-paste">✅ Empty rows at the start and end are automatically removed. Paste exactly two columns: Student ID and Marks.</div>
                     <!-- Preview of the pasted data; rows are coloured once a starting row is chosen -->
@@ -100,7 +100,7 @@
                         Do not rename the ERP file: the subject code is read from its file name.
                     </div>
                     <form id="formDES">
-                        <input type="file" id="UploadDESFile" accept=".csv" style="width: 79.5%;" />
+                        <input type="file" id="UploadDESFile" accept=".csv" autocomplete="off" style="width: 79.5%;" />
                         <input type="submit" id="desSubmitBtn" class="btn btn-primary"
                             name="submit" style="width: 20%;" />
                     </form>
@@ -155,6 +155,12 @@
         // Special grade codes that mean the student is not letter-graded
         const SPECIAL_GRADES = new Set(["W", "I", "NC", "GA", "RC", "DP", "TGA", "RRA"]);
 
+        // BITS student ID: 4-digit year, 4-character programme code (A7PS, B4A7, H103,
+        // PHXF, ...), 4-digit roll number, campus letter; capitals only (13 characters)
+        const BITS_ID_RE  = /^\d{4}[A-Z0-9]{4}\d{4}[A-Z]$/;
+        // A cell shaped like an ID in any letter case (used to capitalise pasted IDs)
+        const ID_SHAPE_RE = /^\d{4}[A-Za-z0-9]{4}\d{4}[A-Za-z]$/;
+
         // ── Initialisation ────────────────────────────────────────────────────────
 
         /** Disable controls that require prior steps to be complete. */
@@ -164,6 +170,45 @@
             desSubmit.disabled    = true;
             showHistBtn.disabled  = true;
         }
+
+        /**
+         * Clear everything entered on this page. Runs on every 'pageshow', including
+         * when the page is reached with the browser's Back button (the browser would
+         * otherwise show the previous course's data, or a page restored from its cache).
+         */
+        function resetNewGradePage() {
+            subjectName.value  = '';
+            subjectMarks.value = '';
+            pasteArea.value    = '';
+            csvDESFile.value   = '';
+            subjectName.classList.remove('border-danger');
+            subjectMarks.classList.remove('border-danger');
+            startChooser.selectedIndex = 0;
+
+            chosenStartRow  = -1;
+            subjectNameTxt  = '';
+            subjectMarksVal = 0;
+            subjectCode     = '';
+            desFileName     = '';
+            csvSRCtxt       = [];
+            csvDEStxt       = [];
+
+            renderPastePreview([], []);
+            document.getElementById("demo").innerHTML = '';
+
+            // Pop-up windows left open when the page was left
+            ['missingMarksModal', 'specialGradesModal'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            });
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow     = '';
+            document.body.style.paddingRight = '';
+
+            defaultState();
+        }
+        window.addEventListener('pageshow', resetNewGradePage);
 
         // ── Progressive enable helpers ────────────────────────────────────────────
 
@@ -275,6 +320,19 @@
                 }
             });
 
+            // Student IDs (column 1): trim, and convert letters to capitals (digits are
+            // unchanged), e.g. 2023a7ps0412h -> 2023A7PS0412H. Only cells shaped like an
+            // ID are changed, so a header such as "Student ID" stays as typed.
+            let capsCount = 0;
+            tableData.forEach(row => {
+                const v = row[0].trim();
+                if (ID_SHAPE_RE.test(v)) {
+                    const upper = v.toUpperCase();
+                    if (upper !== v) capsCount++;
+                    row[0] = upper;
+                }
+            });
+
             // Show the trimmed data in the textarea and in the preview table
             pasteArea.value = tableData.map(row => row.join('\t')).join('\n');
             renderPastePreview(tableData, badRows);
@@ -302,9 +360,9 @@
 
             // Show confirmation
             const rowCount = csvSRCtxt.length;
-            const roundedMsg = roundedCount > 0
-                ? ` ${roundedCount} decimal mark(s) rounded up to whole numbers.`
-                : '';
+            const roundedMsg = (roundedCount > 0
+                ? ` ${roundedCount} decimal mark(s) rounded up to whole numbers.` : '')
+                + (capsCount > 0 ? ` ${capsCount} ID(s) converted to capital letters.` : '');
             document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, 2 columns. First column = ID, second column = Marks.${roundedMsg} Choose starting row.`;
         }
 
@@ -341,10 +399,37 @@
          * With no starting row chosen (chosenStartRow = -1) the colouring is removed.
          */
         function highlightPastePreview() {
+            const badIds = new Set(invalidIdRows());
             Array.from(pastePreviewBody.rows).forEach((tr, i) => {
                 tr.classList.toggle('paste-header', chosenStartRow >= 0 && i <  chosenStartRow);
                 tr.classList.toggle('paste-data',   chosenStartRow >= 0 && i >= chosenStartRow);
+                tr.classList.toggle('paste-bad',    badIds.has(i));   // ID not in BITS format
             });
+        }
+
+        /**
+         * Indices of student rows (from the chosen starting row) whose ID is not in
+         * BITS format. Completely empty rows inside the data are skipped.
+         */
+        function invalidIdRows() {
+            if (chosenStartRow < 0 || !csvSRCtxt) return [];
+            const bad = [];
+            for (let i = chosenStartRow; i < csvSRCtxt.length; i++) {
+                const id = csvSRCtxt[i][0].trim();
+                if (id === '' && csvSRCtxt[i][1].trim() === '') continue;
+                if (!BITS_ID_RE.test(id)) bad.push(i);
+            }
+            return bad;
+        }
+
+        /** Message for IDs that are not in BITS format (empty string if all are fine). */
+        function invalidIdMessage() {
+            const bad = invalidIdRows();
+            if (bad.length === 0) return '';
+            const examples = bad.slice(0, 3).map(i => `row ${i + 1}: "${escapeHtml(csvSRCtxt[i][0]) || '(empty)'}"`).join(', ');
+            return `❌ ${bad.length} student ID(s) are not in BITS format (shown in red; ${examples}${bad.length > 3 ? ', …' : ''}). ` +
+                   `IDs must look like 2023A7PS0412H: 4-digit year, 4-character programme code, 4-digit roll number and campus letter. ` +
+                   `Fix them in your sheet and paste again.`;
         }
 
         // Attach paste listener to the textarea
@@ -385,6 +470,8 @@
             if (csvSRCtxt && csvSRCtxt.length > 0) {
                 enableDesSelector();
                 document.getElementById("demo").innerHTML += `<br>📌 Starting row set to row ${idx} (0‑based index ${chosenStartRow}). Now upload ERP CSV.`;
+                const idProblem = invalidIdMessage();
+                if (idProblem) document.getElementById("demo").innerHTML += `<br>${idProblem}`;
             } else {
                 document.getElementById("demo").innerHTML = "⚠️ Please paste marks data first, then choose starting row.";
             }
@@ -481,6 +568,13 @@
             // Check that start row is chosen
             if (chosenStartRow < 0 || chosenStartRow >= csvSRCtxt.length) {
                 document.getElementById("demo").innerHTML = "❌ Please select a valid starting row number.";
+                return;
+            }
+
+            // Check that every student ID is in BITS format
+            const idProblem = invalidIdMessage();
+            if (idProblem) {
+                document.getElementById("demo").innerHTML = idProblem;
                 return;
             }
 
@@ -676,7 +770,9 @@
          * instructor can review them before proceeding.
          */
         function showSpecialGradesModal(gradesDetails, specialGradeMap) {
-            // Only create the modal DOM element once
+            // Rebuild the window each time, so it never shows a list from an earlier attempt
+            const oldModal = document.getElementById('specialGradesModal');
+            if (oldModal) oldModal.remove();
             if (!document.getElementById('specialGradesModal')) {
                 const rows = specialGradeMap.map(row => `
                     <tr>

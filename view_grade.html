@@ -20,7 +20,7 @@
                 <div style="padding-top: 15px;">
                     <!-- Form to upload a previously saved grade JSON file -->
                     <form id="formJSON">
-                        <input type="file" id="UploadJsonFile" accept=".json" style="width: 79.5%;"/>
+                        <input type="file" id="UploadJsonFile" accept=".json" autocomplete="off" style="width: 79.5%;"/>
                         <input type="submit" class="btn btn-primary" name="submit" style="width: 20%;"/>
                     </form>
                 </div>
@@ -32,6 +32,10 @@
     <script>
         const formJSON   = document.getElementById("formJSON");
         const jsonFile   = document.getElementById("UploadJsonFile");
+
+        // Clear the chosen file every time the page is shown, including when it is
+        // reached with the browser's Back button, so an earlier file is not reused
+        window.addEventListener('pageshow', () => { jsonFile.value = ''; });
 
         /**
          * On form submit: read the JSON file, store it in sessionStorage,
