@@ -186,6 +186,7 @@
             #myModal,
             #ncDialog,
             #ncCalcModal,
+            #ncApplyModal,
             #gradeTip,
             #titleEditBtn { display: none !important; visibility: hidden !important; }
         }
@@ -271,7 +272,13 @@
         #ncCalcModal .nc-result .nc-line { font-size: 1.15rem; font-weight: bold; color: #a00000; }
         #ncCalcModal .nc-list { max-height: 12rem; overflow-y: auto; margin-top: .5rem; font-size: .85rem; }
         #ncCalcModal .nc-list td, #ncCalcModal .nc-list th { padding: 0 .75rem 0 0; }
-        #ncTopK { width: 4.5em; display: inline-block; }
+        #ncTopK, #ncTopPct { width: 4.5em; display: inline-block; }
+        /* Red square "mark the NC zone as NC" button, left of NC Calculator */
+        #ncApplyBtn { flex: 0 0 auto; aspect-ratio: 1 / 1; padding: 0; display: flex;
+                      align-items: center; justify-content: center; }
+        #ncApplyBtn svg { width: 55%; height: 55%; }
+        #ncApplyModal .nc-backup-note { text-decoration: underline; font-size: .85rem; }
+        #ncApplyModal .file-prefix { display: inline-block; font-weight: bold; }   /* underline would hide the underscores */
         #sgWarning { color: #c00000; font-weight: bold; font-size: .8rem; margin: 0; }
         #sgBackupNote { text-decoration: underline; font-size: .8rem; margin: 0; }
         /* inline-block stops the underline, which would otherwise hide the underscores */
@@ -559,10 +566,18 @@
                 </div>
                 <div class="col-sm-10">
                     <div class="row">
-                        <div class="col-sm-2">
+                        <div class="col-sm-2 d-flex gap-1">
+                            <!-- Mark everyone in the NC zone as NC (openNCApply) -->
+                            <button type="button" id="ncApplyBtn" class="btn btn-danger btn-xs"
+                                    onclick="openNCApply();"
+                                    title="Mark everyone in the NC zone as NC"
+                                    aria-label="Mark everyone in the NC zone as NC">
+                                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13"
+                                     stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+                            </button>
                             <button type="button" class="btn btn-secondary btn-xs"
                                     onclick="openNCCalc();"
-                                    style="padding: 5px; width:100%">
+                                    style="padding: 5px; flex: 1 1 auto; min-width: 0;">
                                 NC Calculator
                             </button>
                         </div>
@@ -683,7 +698,10 @@
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="ncRule" id="ncRuleTopK"
                                value="topk" onchange="onNCCalcChange();">
-                        <label class="form-check-label" for="ncRuleTopK">30% of the average marks of the top</label>
+                        <input type="number" id="ncTopPct" class="form-control form-control-sm"
+                               min="1" max="100" step="any" value="30" aria-label="Percentage of the top-K average"
+                               oninput="onNCCalcChange();" onfocus="ncRuleTopK.checked = true; onNCCalcChange();">
+                        <label class="form-check-label" for="ncRuleTopK">% of the average marks of the top</label>
                         <input type="number" id="ncTopK" class="form-control form-control-sm"
                                min="1" step="1" value="3" aria-label="K, number of top students"
                                oninput="onNCCalcChange();" onfocus="ncRuleTopK.checked = true; onNCCalcChange();">
@@ -701,6 +719,31 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Mark NC zone as NC: confirmation (openNCApply / confirmNCApply) ───── -->
+    <div class="modal fade" id="ncApplyModal" tabindex="-1"
+         aria-labelledby="ncApplyLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ncApplyLabel">Mark NC zone as NC</h5>
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fw-bold">Mark everyone in NC zone as NC and redraw histogram and reset minimum marks in histogram?</p>
+                    <div id="ncApplyDetails"></div>
+                    <p class="nc-backup-note mt-2 mb-0">Before the change, a backup of the current grades is downloaded as
+                       a JSON file named <span class="file-prefix">AUTO_BACKUP_</span> + the usual Save Grades name; open it with View Grades to undo.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="ncApplyYes"
+                            onclick="confirmNCApply();">Yes</button>
                 </div>
             </div>
         </div>
@@ -787,9 +830,9 @@
     let desFileName        = "";
     let isHistogram        = false;  // true while Grade Analytics shows the bar chart
 
-    // NC Calculator: chosen rule, K for the top-K rule, and whether the NC zone is
-    // shaded on the histogram (saved in the grade object as ncZone)
-    let ncSettings         = { rule: 'median', k: 3, show: false };
+    // NC Calculator: chosen rule, K and percentage for the top-K rule, and whether the
+    // NC zone is shaded on the histogram (saved in the grade object as ncZone)
+    let ncSettings         = { rule: 'median', k: 3, pct: 30, show: false };
 
     let markLowest         = 10000;
     let markHighest        = 0;
@@ -1208,8 +1251,8 @@
      * histogram bar, then refresh the counts, MGPV, averages, tables and chart.
      * gCutOffs and the histogram range (markLowest..markHighest) are not changed.
      */
-    function applyNonLetterGrades() {
-        for (const [id, code] of pendingSpecial) {
+    function applyNonLetterGrades(changes = pendingSpecial) {   // Map id -> non-letter grade
+        for (const [id, code] of changes) {
             const idx = indexFromMarkMap(id);
             if (idx < 0) continue;
             const [stID, stMarks, stName] = markMap[idx];
@@ -1227,7 +1270,7 @@
                 if (pos >= 0) list.splice(pos, 1);
             }
         }
-        pendingSpecial.clear();
+        changes.clear();
 
         // Average marks over the remaining letter-graded students
         avgMarks = markMap.length > 0
@@ -1920,19 +1963,19 @@
 
     // =============================================================================
     // NC CALCULATOR
-    // Two rules for the NC line: 40% of the median marks, or 30% of the average of
-    // the top K students. Students with marks below the line are NC candidates.
+    // Two rules for the NC line: 40% of the median marks, or a percentage (30 to
+    // start with, editable) of the average of the top K students. Students with marks below the line are NC candidates.
     // The marks used are the letter-graded students plus those already given NC
     // (so awarding NC in Search/Edit Grades does not move the line); W and the
     // other non-letter grades are left out. Optionally the part of the histogram
     // left of the line is shaded light red (drawNCZone, via the chart plugin).
     // =============================================================================
     const NC_MEDIAN_SHARE = 0.4;
-    const NC_TOPK_SHARE   = 0.3;
     const ncCalcModal  = document.getElementById('ncCalcModal');
     const ncRuleMedian = document.getElementById('ncRuleMedian');
     const ncRuleTopK   = document.getElementById('ncRuleTopK');
     const ncTopK       = document.getElementById('ncTopK');
+    const ncTopPct     = document.getElementById('ncTopPct');
     const ncZoneSwitch = document.getElementById('ncZoneSwitch');
     const ncCalcResult = document.getElementById('ncCalcResult');
 
@@ -1959,11 +2002,12 @@
         const n = marks.length;
         if (n === 0) return { error: 'There are no students to calculate from.' };
         if (ncSettings.rule === 'topk') {
-            const k = ncSettings.k;
+            const k = ncSettings.k, pct = ncSettings.pct;
             if (!Number.isInteger(k) || k < 1 || k > n) return { error: `K must be a whole number from 1 to ${n}.` };
+            if (!(pct > 0 && pct <= 100)) return { error: 'The percentage must be more than 0 and at most 100.' };
             const avg = marks.slice(-k).reduce((a, b) => a + b, 0) / k;
-            return { value: NC_TOPK_SHARE * avg,
-                     explain: `Average of the top ${k} = ${fmtMarks(avg)}; 30% of it` };
+            return { value: pct / 100 * avg,
+                     explain: `Average of the top ${k} = ${fmtMarks(avg)}; ${fmtMarks(pct)}% of it` };
         }
         const mid = Math.floor(n / 2);
         const med = n % 2 ? marks[mid] : (marks[mid - 1] + marks[mid]) / 2;
@@ -2001,6 +2045,7 @@
         ncRuleMedian.checked = ncSettings.rule !== 'topk';
         ncRuleTopK.checked   = ncSettings.rule === 'topk';
         ncTopK.value         = ncSettings.k;
+        ncTopPct.value       = ncSettings.pct;
         ncZoneSwitch.checked = ncSettings.show;
         renderNCResult();
         bootstrap.Modal.getOrCreateInstance(ncCalcModal).show();
@@ -2011,6 +2056,7 @@
         ncSettings = {
             rule: ncRuleTopK.checked ? 'topk' : 'median',
             k:    Number(ncTopK.value),
+            pct:  Number(ncTopPct.value),
             show: ncZoneSwitch.checked
         };
         renderNCResult();
@@ -2045,6 +2091,73 @@
         ctx.lineTo(right, yScale.bottom);
         ctx.stroke();
         ctx.restore();
+    }
+
+    // ── Mark everyone in the NC zone as NC ────────────────────────────────────────
+    const ncApplyModal   = document.getElementById('ncApplyModal');
+    const ncApplyDetails = document.getElementById('ncApplyDetails');
+    const ncApplyYes     = document.getElementById('ncApplyYes');
+
+    /** Letter-graded students below the current NC line ([id, marks, name], ...). */
+    function ncZoneStudents(line) {
+        return markMap.filter(e => Number(e[1]) < line.value);
+    }
+
+    /** Red cross button: ask before giving NC to everyone in the NC zone. */
+    function openNCApply() {
+        const line = ncLine();
+        const students = line.error ? [] : ncZoneStudents(line);
+        if (line.error) {
+            ncApplyDetails.innerHTML = `<p class="text-danger">${escapeHtml(line.error)} Fix it in the NC Calculator first.</p>`;
+        } else if (students.length === 0) {
+            ncApplyDetails.innerHTML = `<p>No letter-graded student has marks below the NC line (${fmtMarks(line.value)}); there is nothing to change.</p>`;
+        } else {
+            const list = students.slice().sort((a, b) => a[1] - b[1]).slice(0, TIP_MAX_STUDENTS)
+                .map(e => `<tr><td>${escapeHtml(e[0])}</td><td>${escapeHtml(e[2])}</td><td>${e[1]}</td></tr>`).join('');
+            ncApplyDetails.innerHTML =
+                `<p class="mb-1">${escapeHtml(line.explain)}: NC line = <b>${fmtMarks(line.value)}</b> marks
+                 (rule chosen in the NC Calculator). <b>${students.length}</b> student(s) below it will get NC:</p>` +
+                `<div class="nc-list" style="max-height:12rem; overflow-y:auto; font-size:.85rem;"><table class="table table-sm mb-0">` +
+                `<tr><th>ID</th><th>Name</th><th>Marks</th></tr>${list}</table>` +
+                (students.length > TIP_MAX_STUDENTS ? `… and ${students.length - TIP_MAX_STUDENTS} more` : '') + `</div>`;
+        }
+        ncApplyYes.disabled = students.length === 0;
+        bootstrap.Modal.getOrCreateInstance(ncApplyModal).show();
+    }
+
+    /**
+     * Yes: download the AUTO_BACKUP_ JSON (state before the change), move every
+     * student in the NC zone to NC (same path as Search/Edit Grades), then start
+     * the histogram at the new lowest letter-graded mark (minus the usual 5).
+     */
+    function confirmNCApply() {
+        const line = ncLine();
+        if (line.error) return;
+        const changes = new Map(ncZoneStudents(line).map(e => [e[0], 'NC']));
+        bootstrap.Modal.getOrCreateInstance(ncApplyModal).hide();
+        if (changes.size === 0) return;
+        downloadGradeJSON('AUTO_BACKUP_');
+        applyNonLetterGrades(changes);
+        resetHistogramMinimum();
+    }
+
+    /**
+     * Restart the x-axis at the lowest letter-graded mark minus 5 (as on load; the
+     * highest mark is kept) and rebuild the bars. Active cutoffs that now fall at or
+     * below the new minimum (or below the grade under them) are moved up just enough
+     * to stay inside the range and in order.
+     */
+    function resetHistogramMinimum() {
+        if (markMap.length === 0) return;
+        markLowest = Math.max(0, Math.min(...markMap.map(e => e[1])) - 5);
+        let prev = markLowest - 1;
+        for (let g = 0; g < 8; g++) {
+            if (!keepG[g]) continue;
+            if (gCutOffs[g] <= prev) gCutOffs[g] = prev + 1;
+            prev = gCutOffs[g];
+        }
+        buildHistogramBins();
+        updateAfterCutoffChange();   // counts, MGPV, chart (labels/data changed in place), autosave
     }
 
     // =============================================================================
@@ -2124,6 +2237,25 @@
     // showLoadError() and the load-error handler are defined right after the overlay
     // markup, before the libraries load.
 
+    /**
+     * (Re)build the histogram data arrays, one entry per integer mark from
+     * markLowest to markHighest. The arrays are emptied and refilled in place,
+     * because the chart holds references to xvalues / yvalues.
+     */
+    function buildHistogramBins() {
+        xvalues.length = 0;
+        yvalues.length = 0;
+        marksForHistogram.length = 0;
+        for (let mark = markLowest; mark <= markHighest; mark++) {
+            const students = markMap
+                .filter(e => e[1] === mark)
+                .map(e => e[0] + ' : ' + e[2]);
+            xvalues.push('' + mark);
+            yvalues.push(students.length);
+            marksForHistogram.push(['' + mark, students.length, students]);
+        }
+    }
+
     function loadAtStart() {
         // Opened without grade data (e.g. a bookmark or a new tab): nothing to draw
         if (!gradesDetails) {
@@ -2196,15 +2328,7 @@
         updateNonLetterCounts();
         TFtotalGraded.innerHTML   = totalStudentsGraded;
 
-        // Build the histogram data arrays (one entry per integer mark value)
-        for (let mark = markLowest; mark <= markHighest; mark++) {
-            const students = markMap
-                .filter(e => e[1] === mark)
-                .map(e => e[0] + ' : ' + e[2]);
-            xvalues.push('' + mark);
-            yvalues.push(students.length);
-            marksForHistogram.push(['' + mark, students.length, students]);
-        }
+        buildHistogramBins();
 
         // Calculate and display MGPV
         calculateMGPV();
