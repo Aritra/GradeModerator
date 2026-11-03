@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <link rel="stylesheet" type="text/css" media="print" href="print.css"/>
+    <title>BITS Pilani Grade Moderator</title>
+
+    <style>
+        html, body { height: 100%; }
+        .container-fluid { height: 100%; overflow-y: hidden; }
+
+        /*
+         * Fluid type scale. Bootstrap sizes text, buttons and spacing in rem, and
+         * this page's own sizes below are in rem too, so everything follows the
+         * window. Width and height both count, so short-but-wide windows don't
+         * get oversized text. Roughly: 1280x633 -> 12.7px, 1920x993 -> 16px,
+         * 2560x1353 -> 19.7px (viewport sizes, after OS display scaling).
+         */
+        html { font-size: clamp(12px, calc(6px + 0.35vw + 0.35vh), 24px); }
+
+        /*
+         * Main page: the top panel takes the height it needs; the buttons area is
+         * 10% of the window height (see #allControlsBelow); the chart gets the rest.
+         */
+        #mainLayout { display: grid; grid-template-rows: auto minmax(0, 1fr) 10vh; }
+        /* On paper the buttons are hidden, so let the chart use the rest of the page */
+        @media print { #mainLayout { grid-template-rows: auto minmax(0, 1fr) auto; } }
+
+        /* Top panel, left: statistics labels/numbers and MGPV, larger than Bootstrap defaults */
+        /* Label at the top, number at the bottom, so numbers line up even when
+           some labels wrap onto two lines and others don't */
+        #statsRow > div { display: flex; flex-direction: column; justify-content: space-between; }
+        #statsRow p  { font-size: 1.2rem; margin-bottom: .25rem; }
+        #statsRow h4 { font-size: 2.25rem; }
+        #statsRow h5 { font-size: 1.6rem; margin-bottom: .25rem; }   /* "MGPV" label */
+        /* MGPV number: tight line box so it doesn't push the chart down */
+        #TFMGPV      { line-height: 1; margin-bottom: 0; }
+
+        /* Top panel, right: the two grade tables with the colour strip flush between them */
+        #gradePanel { display: flex; flex-direction: column; justify-content: flex-start; }
+        .grade-table {
+            width: 100%; table-layout: fixed; border-collapse: collapse;
+            font-size: 1.1rem; font-weight: 500; margin: 0;
+        }
+        /* Label column: the widest label ("Non Letter Grades", bold) is ~9.15em, plus
+           ~0.6em padding each side and a little slack for wider fonts. Same width in
+           both tables so their grade columns line up; the 8 grade columns share the rest. */
+        .grade-table col.label-col { width: 10.75em; }
+        .grade-table th, .grade-table td {
+            border: 1px solid #000; text-align: center; padding: .2rem .25rem;
+        }
+        .grade-table th:first-child, .grade-table td:first-child {
+            text-align: left; padding: .2rem .6em; white-space: nowrap;
+        }
+        /* Header rows; print-color-adjust keeps the backgrounds in the printed PDF */
+        .grade-table tr.head-grey > *,
+        .grade-table tr.head-navy > * {
+            color: #fff; font-weight: bold;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .grade-table tr.head-grey > * { background-color: #555555; }   /* dark grey */
+        .grade-table tr.head-navy > * { background-color: #000080; }   /* navy blue */
+        /* Coloured strip filling the gap between the tables, edge to edge */
+        .grade-strip { display: block; width: 100%; margin: 0; }
+
+        /* Hover popup on the grade tables (MGPV weights / students with a non-letter grade) */
+        .grade-table th, .grade-table td { cursor: help; }
+        #gradeTip {
+            position: fixed; display: none; z-index: 1100; pointer-events: none;
+            max-width: 22rem; padding: .5rem .75rem;
+            background: #fff; border: 1px solid #000; border-radius: .25rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+            font-size: .85rem; line-height: 1.4; text-align: left;
+        }
+        #gradeTip .tip-title { background: #000080; color: #fff; font-weight: bold;
+                              margin: -.5rem -.75rem .4rem; padding: .3rem .75rem; }
+        #gradeTip .tip-title.grey { background: #555555; }   /* matches the non-letter table header */
+        #gradeTip table { border-collapse: collapse; }
+        #gradeTip td { padding: 0 .6rem 0 0; }
+        #gradeTip td.num { text-align: right; }
+
+        /* Buttons area (10vh): 2vh gap below the chart's x-axis labels, 5vh tall
+           buttons, 3vh gap to the bottom of the window */
+        #allControlsBelow { padding: 2vh 0 3vh; }
+        #allControlsBelow .btn { height: 5vh; font-weight: bold; }
+        #demo { margin: 0; }
+        .body-film { min-height: 100%; overflow-y: scroll; }
+
+        /* Stacking canvas layers for the grade-line overlay */
+        .wrapper { position: relative; }
+        .wrapper canvas { position: absolute; top: 0; left: 0; }
+
+        .centerrr {
+            margin: auto;
+            border: 3px solid #0a1f66;
+            padding: 10px;
+        }
+
+        /* Extra-small button variant */
+        .btn-group-xs > .btn, .btn-xs {
+            padding: .25rem .4rem;
+            font-size: .875rem;
+            line-height: 1.2;
+            border-radius: .2rem;
+        }
+
+        /*
+         * Draggable grade bubbles ("ball on a stick") over the cutoff lines.
+         * #gradeBubbleLayer is laid out exactly like the canvas (absolute, 100% x 100%,
+         * and the same Bootstrap `.row > *` side padding), so #gradeBubbleArea fills
+         * the same box the chart is drawn into. Bubbles are placed in % of that box,
+         * so they follow the chart through any resize, including print layout.
+         * Neither box takes pointer events, so bar clicks still reach the canvas.
+         */
+        #gradeBubbleLayer {
+            position: absolute; left: 0; top: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 5;
+        }
+        #gradeBubbleArea { position: relative; width: 100%; height: 100%; }
+        .grade-bubble {
+            position: absolute;
+            transform: translate(-50%, -100%);   /* (left, top) = bottom centre of the stick */
+            display: flex; flex-direction: column; align-items: center;
+            pointer-events: auto; cursor: grab;
+            touch-action: none; user-select: none;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .grade-bubble .ball {
+            /* height must match BUBBLE_BALL_REM in the script */
+            min-width: 1.75rem; height: 1.75rem; padding: 0 .4rem;
+            border-radius: .875rem;
+            background-color: #000088;            /* same colour as the cutoff line */
+            color: #fff; font-weight: bold; font-size: .8rem;
+            line-height: 1.75rem; text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+        .grade-bubble .stick { width: 2px; background-color: #000088; }
+        .grade-bubble:hover .ball   { background-color: #1a1aaa; }
+        .grade-bubble.dragging      { cursor: grabbing; z-index: 1; }
+        .grade-bubble.dragging .ball { background-color: #2a2acc; }
+
+        /* Hide all overlay/modal backdrops when printing so they don't tint the page */
+        @media print {
+            .overlayDiv,
+            .modal-backdrop,
+            #myModal,
+            #ncDialog,
+            #gradeTip { display: none !important; visibility: hidden !important; }
+        }
+
+        /* Full-screen overlay backdrop (used for Search Grades and Grade Analytics) */
+        .overlayDiv {
+            visibility: hidden;
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.541);
+        }
+        .overlayDivChild {
+            width: 37.5rem; height: 18.75rem;
+            max-width: 95vw; max-height: 95vh;   /* never larger than the window */
+            margin: 0 auto;
+            background-color: #fff;
+            border: 1px solid #000;
+            padding: 15px;
+            position: relative;
+            text-align: center;
+        }
+
+        /* Bar-click student-list modal — scoped to #myModal so Bootstrap modals are unaffected */
+        #myModal { display: none; position: fixed; z-index: 1050; padding-top: 6rem;
+                   left: 0; top: 0; width: 100%; height: 100%;
+                   overflow: auto; background-color: rgba(0,0,0,0.4); }
+        #myModal .modal-content {
+            position: relative; background-color: #fefefe;
+            margin: auto; padding: 0; border: 1px solid #888; width: 80%;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            animation-name: animatetop; animation-duration: 0.4s;
+        }
+        @keyframes animatetop {
+            from { top: -300px; opacity: 0; }
+            to   { top: 0;      opacity: 1; }
+        }
+        #myModal .close { color: white; float: right; font-size: 1.75rem; font-weight: bold; }
+        #myModal .close:hover, #myModal .close:focus { color: #000; text-decoration: none; cursor: pointer; }
+        #myModal .modal-header { padding: 10px 16px; background-color: #5cb85c; color: white; }
+        #myModal .modal-body   { padding: 10px 16px; }
+        #myModal .modal-footer { padding: 10px 16px; background-color: #5cb85c;
+                                 align-items: left; color: white; }
+
+        /* Student search table */
+        * { box-sizing: border-box; }
+        #searchStudent {
+            width: 100%; font-size: .75rem;
+            padding: .5rem; border: 1px solid #ddd; margin-bottom: .75rem;
+        }
+        #specialGradeTable {
+            border-collapse: collapse; width: 100%;
+            border: 1px solid #ddd; font-size: .75rem;
+        }
+        #specialGradeTable th, #specialGradeTable td { text-align: left; padding: .75rem; }
+        #specialGradeTable tr { border-bottom: 1px solid #ddd; }
+        #specialGradeTable tr:hover { background-color: #d6d6d6; }
+        #specialGradeTable th { position: sticky; top: 0; z-index: 1; background-color: #d6d6d6; }
+        .selected { background-color: rgb(7, 39, 145); color: #FFF; }
+    </style>
+
+    <script>
+        // Load grade data passed from new_grade.html or view_grade.html via sessionStorage
+        const gradesDetails = JSON.parse(sessionStorage.getItem("gradeObject"));
+    </script>
+</head>
+
+<body onload="loadAtStart()">
+
+    <!-- ── Search Grades overlay ─────────────────────────────────────────────── -->
+    <div id="overlaySG" class="overlayDiv">
+        <div class="overlayDivChild" style="width: 50rem; height: 31.25rem">
+            <div class="container-fluid">
+                <div class="row" style="padding: 5px; height:90%">
+                    <p>Search Grade of Students</p>
+                    <input type="text" id="searchStudent" onkeyup="spgSearch()"
+                           placeholder="Search for names or IDs...">
+                    <div style="overflow-y: scroll; height:70%; width:100%; padding:0px">
+                        <table id="specialGradeTable">
+                            <tr class="header">
+                                <th style="width:20%;">ID</th>
+                                <th style="width:50%;">Name</th>
+                                <th style="width:15%;">Marks</th>
+                                <th style="width:15%;">Grade</th>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" style="padding: 5px; height:10%">
+                    <div class="col-sm-8">
+                        <p id="selectedForSpGrade"></p>
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="button" onclick="dismissOverlaySG()"
+                                class="btn btn-danger btn-sm"
+                                style="padding: 5px; width:100%; height:100%">
+                            I am done!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Grade Analytics overlay (nested inside overlaySG backdrop) ──────── -->
+        <div id="overlayGA" class="overlayDiv">
+            <div class="overlayDivChild" style="width: 43.75rem; height: 31.25rem">
+                <div class="container-fluid">
+                    <div class="row" style="padding: 5px; height:90%">
+                        <p id="gradeAnalyticsTopLabel">Grade Analytics</p>
+                        <canvas id="chartContainer" style="width: 100%; height: 90%;"></canvas>
+                    </div>
+                    <div class="row" style="padding: 5px; height:10%">
+                        <div class="col-sm-3">
+                            <button id="toggleChartButton" onclick="toggleChart()"
+                                    class="btn btn-primary btn-sm"
+                                    style="padding: 5px; width:100%">
+                                Show Pie Chart
+                            </button>
+                        </div>
+                        <div class="col-sm-6"></div>
+                        <div class="col-sm-3">
+                            <button type="button" onclick="dismissOverlayGA()"
+                                    class="btn btn-danger btn-xs"
+                                    style="padding: 5px; width:100%">
+                                Okay!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bar-click student list modal ─────────────────────────────────────── -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="row"></div>
+                <div class="col-sm-10" style="padding-left: 30px;">
+                    <h3 id="headerMyModal"></h3>
+                </div>
+                <div class="col-sm-2"><span class="close">X</span></div>
+            </div>
+            <div class="modal-body">
+                <p id="pInMyModal"></p>
+            </div>
+            <div class="modal-footer">
+                <h4 id="footerMyModal"></h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Main layout ───────────────────────────────────────────────────────── -->
+    <div class="container-fluid" id="mainLayout">
+
+        <!-- Top row: subject info left, grade counts right -->
+        <div class="row" style="padding: 10px 10px .75rem;">
+
+            <!-- Left column: subject name, statistics -->
+            <div class="col-sm-6">
+                <div class="row" style="padding: 5px;">
+                    <h4 id="TFSubjectName">Here goes the subject code and name</h4>
+                </div>
+                <div class="row" id="statsRow" style="padding: 5px;">
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Total Students</p>
+                        <h4 id="TFtotalStudents" style="text-align: center;">—</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Students Graded</p>
+                        <h4 id="TFtotalGraded" style="text-align: center;">—</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Maximum Marks</p>
+                        <h4 id="TFMaxMarks" style="text-align: center;">—</h4>
+                    </div>
+                    <div class="col-sm-2">
+                        <p style="text-align: center;">Average Marks</p>
+                        <h4 id="TFAvgMarks" style="text-align: center;">—</h4>
+                    </div>
+                    <div class="col-sm-4">
+                        <h5 style="text-align: center;">MGPV</h5>
+                        <h1 id="TFMGPV" style="text-align: center; font-size: 5.25rem;">—</h1>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: non-letter and letter grade counts -->
+            <div class="col-sm-6" id="gradePanel">
+
+                <!-- Non-letter grade counts (ids are filled in by loadAtStart) -->
+                <table class="grade-table" id="nonLetterTable">
+                    <colgroup><col class="label-col"><col span="8"></colgroup>
+                    <tr class="head-grey">
+                        <th>Non Letter Grades</th>
+                        <th>W</th>
+                        <th>I</th>
+                        <th>NC</th>
+                        <th>GA</th>
+                        <th>RC</th>
+                        <th>DP</th>
+                        <th>TGA</th>
+                        <th>RRA</th>
+                    </tr>
+                    <tr>
+                        <td>Count</td>
+                        <td id="spGradeW">0</td>
+                        <td id="spGradeI">0</td>
+                        <td id="spGradeNC">0</td>
+                        <td id="spGradeGA">0</td>
+                        <td id="spGradeRC">0</td>
+                        <td id="spGradeTP">0</td>
+                        <td id="spGradeTGA">0</td>
+                        <td id="spGradeRRA">0</td>
+                    </tr>
+                </table>
+
+                <img src="imgs/separator.svg" class="grade-strip" alt="">
+
+                <!-- Letter grades: cutoffs and counts (ids are filled in by updateGradeDisplay) -->
+                <table class="grade-table" id="letterTable">
+                    <colgroup><col class="label-col"><col span="8"></colgroup>
+                    <tr class="head-navy">
+                        <th>Letter Grades</th>
+                        <th>E</th>
+                        <th>D</th>
+                        <th>C-</th>
+                        <th>C</th>
+                        <th>B-</th>
+                        <th>B</th>
+                        <th>A-</th>
+                        <th>A</th>
+                    </tr>
+                    <tr>
+                        <td>CutOff</td>
+                        <td id="cutOffE">0</td>
+                        <td id="cutOffD">0</td>
+                        <td id="cutOffCm">0</td>
+                        <td id="cutOffC">0</td>
+                        <td id="cutOffBm">0</td>
+                        <td id="cutOffB">0</td>
+                        <td id="cutOffAm">0</td>
+                        <td id="cutOffA">0</td>
+                    </tr>
+                    <tr>
+                        <td>Count</td>
+                        <td id="countE">0</td>
+                        <td id="countD">0</td>
+                        <td id="countCm">0</td>
+                        <td id="countC">0</td>
+                        <td id="countBm">0</td>
+                        <td id="countB">0</td>
+                        <td id="countAm">0</td>
+                        <td id="countA">0</td>
+                    </tr>
+                </table>
+
+                <!-- Keep-grade checkboxes (shown in "keep" mode, hidden by default per AUGSD) -->
+                <div class="row" id="keepGradeDiv" style="padding-top: 5px;">
+                    <div class="col-sm-4"><h6 style="text-align: right;">Keep Grades:</h6></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb1" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb2" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb3" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb4" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb5" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb6" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb7" class="form-check-input"></div>
+                    <div class="col-sm-1" style="text-align: center;"><input type="checkbox" id="gcb8" class="form-check-input"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histogram canvas row -->
+        <div class="row wrapper">
+            <canvas id="myChart" style="width:100%; height:100%"></canvas>
+            <!-- Draggable grade bubbles, filled and positioned by positionGradeBubbles() -->
+            <div id="gradeBubbleLayer"><div id="gradeBubbleArea"></div></div>
+        </div>
+
+        <!-- Bottom controls row -->
+        <div class="row" id="allControlsBelow">
+            <div class="row">
+                <div class="col-sm-2">
+                    <p id="demo"></p>
+                </div>
+                <div class="col-sm-10">
+                    <div class="row">
+                        <!-- Spacer: keeps the buttons where they were before the edit switch was removed -->
+                        <div class="col-sm-2"></div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-info btn-xs"
+                                    onclick="openExportOption();"
+                                    style="padding: 5px; width:100%">
+                                Save ERP CSV
+                            </button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-success btn-xs"
+                                    onclick="exportJSON();"
+                                    style="padding: 5px; width:100%">
+                                Save Grades
+                            </button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" class="btn btn-warning btn-xs"
+                                    onclick="showNCDialog();"
+                                    style="padding: 5px; width:100%">
+                                Print PDF
+                            </button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" onclick="overlaySG()"
+                                    class="btn btn-danger btn-xs"
+                                    style="padding: 5px; width:100%">
+                                Search Grades
+                            </button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" onclick="overlayGA()"
+                                    class="btn btn-primary btn-xs"
+                                    style="padding: 5px; width:100%">
+                                Grade Analytics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--
+            divNCcutoff: sits in the same grid row position as allControlsBelow.
+            Invisible by default; shown during printing so the NC criterion text
+            appears on the printed page.  Has a cross button to dismiss it.
+        -->
+        <div class="row" id="divNCcutoff" style="display:none;">
+            <div style="position:relative; padding:10px 20px; display:flex;
+                        align-items:center; width:100%;">
+                <p id="ncCutoffPrintText" style="margin:0; font-size:.875rem;
+                   word-break:break-word; flex:1;"></p>
+                <button onclick="hideNCCutoffDiv();"
+                        style="margin-left:16px; background:none; border:none;
+                               font-size:1.25rem; font-weight:bold; cursor:pointer;
+                               line-height:1; color:#555;"
+                        title="Dismiss">&#x2715;</button>
+            </div>
+        </div>
+    </div><!-- end .container-fluid -->
+
+    <!-- Hover popup for the grade tables, filled by attachGradeTip() handlers -->
+    <div id="gradeTip" role="tooltip"></div>
+
+    <!-- ── NC Cutoff dialog modal ────────────────────────────────────────────── -->
+    <div class="modal fade" id="ncDialog" tabindex="-1"
+         aria-labelledby="ncDialogLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ncDialogLabel">
+                        NC Cutoff &amp; Criterion
+                    </h5>
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="ncCutoffInput" class="form-label">
+                        Please write the NC cutoff and criterion:
+                    </label>
+                    <textarea id="ncCutoffInput" class="form-control"
+                              maxlength="200" rows="4"
+                              placeholder="e.g. NC if marks &lt; 40 and attendance &lt; 75%"
+                              oninput="updateNCCounter();"></textarea>
+                    <small id="ncCounter" class="text-muted" style="float:right;">
+                        200 characters remaining
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning"
+                            onclick="confirmAndPrint();">Print</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── DOM element references ────────────────────────────────────────────────────
+    const myCanvas         = document.getElementById("myChart");
+    const bubbleArea       = document.getElementById("gradeBubbleArea");
+    const keepGradeDiv     = document.getElementById("keepGradeDiv");
+    const specialGradeDiv  = document.getElementById("overlaySG");
+    const gradeAnalyticsDiv= document.getElementById("overlayGA");
+    const modal            = document.getElementById("myModal");
+    const modalP           = document.getElementById("pInMyModal");
+    const modalHeader      = document.getElementById("headerMyModal");
+    const modalFooter      = document.getElementById("footerMyModal");
+    const gaToggleButton   = document.getElementById('toggleChartButton');
+    const gaGraphCanvas    = document.getElementById('chartContainer');
+    const gaTopLabel       = document.getElementById('gradeAnalyticsTopLabel');
+
+    const TFSubjectName    = document.getElementById("TFSubjectName");
+    const TFtotalStudents  = document.getElementById("TFtotalStudents");
+    const TFtotalGraded    = document.getElementById("TFtotalGraded");
+    const TFAvgMarks       = document.getElementById("TFAvgMarks");
+    const TFMaxMarks       = document.getElementById("TFMaxMarks");
+    const TFMGPV           = document.getElementById("TFMGPV");
+
+    // Arrays of DOM refs for the 8 grades: [E, D, C-, C, B-, B, A-, A]
+    const tfCutOffs = [
+        document.getElementById("cutOffE"),  document.getElementById("cutOffD"),
+        document.getElementById("cutOffCm"), document.getElementById("cutOffC"),
+        document.getElementById("cutOffBm"), document.getElementById("cutOffB"),
+        document.getElementById("cutOffAm"), document.getElementById("cutOffA")
+    ];
+    const tfCounts = [
+        document.getElementById("countE"),  document.getElementById("countD"),
+        document.getElementById("countCm"), document.getElementById("countC"),
+        document.getElementById("countBm"), document.getElementById("countB"),
+        document.getElementById("countAm"), document.getElementById("countA")
+    ];
+    // Keep-grade checkboxes (gcb1–gcb8)
+    const keepCheckboxes = [1,2,3,4,5,6,7,8].map(n => document.getElementById(`gcb${n}`));
+
+    // Special-grade count display elements
+    const tfCountW   = document.getElementById("spGradeW");
+    const tfCountI   = document.getElementById("spGradeI");
+    const tfCountNC  = document.getElementById("spGradeNC");
+    const tfCountGA  = document.getElementById("spGradeGA");
+    const tfCountRC  = document.getElementById("spGradeRC");
+    const tfCountTP  = document.getElementById("spGradeTP");
+    const tfCountTGA = document.getElementById("spGradeTGA");
+    const tfCountRRA = document.getElementById("spGradeRRA");
+
+    // ── Global state ──────────────────────────────────────────────────────────────
+    let xvalues            = [];
+    let yvalues            = [];
+    const barColors        = "orangered";
+
+    let markMap            = "";   // [[studentID, marks, name], ...]
+    let spGMap             = "";   // [[studentID, specialGrade, name, marks], ...]
+    let fullMarks          = 0;
+    let retCSV             = "";   // 2D array: ERP CSV with grades filled in
+    let specialG           = [];   // counts of non-letter grades
+    let keepG              = [];   // boolean[8]: which letter grades are active
+    let gCutOffs           = [];   // int[8]: minimum marks for each grade
+    let MGPV               = 0;
+    let marksDistribution  = [];
+    let marksForHistogram  = [];   // [[markValue, count, [studentList]], ...]
+    let gradePopulation    = [0, 0, 0, 0, 0, 0, 0, 0];
+    const gradeNames       = ['E', 'D', 'C-', 'C', 'B-', 'B', 'A-', 'A'];
+    // AUGSD grade-point values: E=2, D=4, C-=5, C=6, B-=7, B=8, A-=9, A=10
+    const gradePoints      = [2, 4, 5, 6, 7, 8, 9, 10];
+    let avgMarks           = 0;
+    let totalStudentsGraded= 0;
+    let initialLoadingDone = false;
+    let subjectCode        = "";
+    let desFileName        = "";
+    let isHistogram        = false;  // true while Grade Analytics shows the bar chart
+
+    let markLowest         = 10000;
+    let markHighest        = 0;
+
+    // Chart instances (tracked so they can be destroyed before redraw)
+    let mainChart          = null;
+    let analyticsChart     = null;
+
+    // ERP column indices — must match new_grade.html constants
+    const ERP_ID_COL    = 3;
+    const ERP_GRADE_COL = 7;
+    const ERP_MARKS_COL = 6;
+    const ERP_NAME_COL  = 4;
+
+    // Shared colour palette for Grade Analytics charts (bar and pie)
+    const CHART_BG_COLORS = [
+        'rgba(255,99,132,0.6)',  'rgba(54,162,235,0.6)',
+        'rgba(255,206,86,0.6)', 'rgba(75,192,192,0.6)',
+        'rgba(153,102,255,0.6)','rgba(255,159,64,0.6)',
+        'rgba(199,150,200,0.6)','rgba(200,200,200,0.6)'
+    ];
+    const CHART_BORDER_COLORS = CHART_BG_COLORS.map(c => c.replace('0.6', '1'));
+
+    // ── Initial display state (per AUGSD request) ─────────────────────────────────
+    // display (not visibility) so the hidden row takes no space in the auto-height top panel
+    keepGradeDiv.style.display      = 'none';
+
+    // ── Modal close handlers ──────────────────────────────────────────────────────
+    document.getElementsByClassName("close")[0].onclick = () => { modal.style.display = "none"; };
+    window.onclick = (event) => { if (event.target === modal) modal.style.display = "none"; };
+
+    // =============================================================================
+    // GRADE UTILITY FUNCTIONS
+    // =============================================================================
+
+    /**
+     * Returns the letter grade string for a given mark score.
+     * Iterates from the highest grade downward to find the first that applies.
+     * Returns "" if the marks are below all active cutoffs.
+     */
+    function getGradeFromMarks(marks) {
+        for (let g = 7; g >= 0; g--) {
+            if (keepG[g] && marks >= gCutOffs[g]) return gradeNames[g];
+        }
+        return "";
+    }
+
+    /**
+     * Recount how many students fall into each of the 8 letter-grade buckets.
+     * Fills the global gradePopulation[] array.
+     * Returns the total number of letter-graded students.
+     */
+    function recalculateGradePopulation() {
+        gradePopulation.fill(0);
+        let totalGraded = 0;
+        for (const entry of markMap) {
+            const marks = entry[1];
+            // Check from highest grade down — first match wins
+            for (let g = 7; g >= 0; g--) {
+                if (keepG[g] && marks >= gCutOffs[g]) {
+                    gradePopulation[g]++;
+                    totalGraded++;
+                    break;
+                }
+            }
+        }
+        return totalGraded;
+    }
+
+    /**
+     * Refresh the cutoff and student-count cells in the grade panel.
+     * Shows 'X' for grades that have been disabled (keepG[g] === false).
+     */
+    function updateGradeDisplay() {
+        for (let g = 0; g < 8; g++) {
+            if (keepG[g]) {
+                tfCutOffs[g].innerHTML = gCutOffs[g];
+                tfCounts[g].innerHTML  = gradePopulation[g];
+            } else {
+                tfCutOffs[g].innerHTML = 'X';
+                tfCounts[g].innerHTML  = 'X';
+            }
+        }
+    }
+
+    /**
+     * Calculate MGPV (Mean Grade Point Value) from current grade populations.
+     * Uses AUGSD grade-point scale: E=2, D=4, C-=5 … A=10.
+     */
+    function calculateMGPV() {
+        MGPV = 0;
+        let denominator = 0;
+        for (let g = 0; g < 8; g++) {
+            if (keepG[g]) {
+                MGPV        += gradePopulation[g] * gradePoints[g];
+                denominator += gradePopulation[g];
+            }
+        }
+        MGPV = denominator > 0 ? MGPV / denominator : 0;
+    }
+
+    /**
+     * Draw or update the main histogram.
+     * On the first call the chart is created from scratch.
+     * On subsequent calls only the grade-cutoff lines are updated via chart.update()
+     * — the canvas element is never destroyed, which prevents Chart.js from
+     * resetting inline canvas dimensions and causing the height-overflow glitch.
+     *
+     * @param {boolean} enableClick - whether bar clicks should open the student modal
+     */
+    function redrawMainHistogram(enableClick) {
+        const tempLineIndx = keepG.reduce(
+            (acc, active, i) => { if (active) acc.push(gCutOffs[i] - markLowest); return acc; }, []
+        );
+
+        if (mainChart) {
+            // Chart already exists — just update the cutoff-line positions and redraw.
+            // Avoids destroy() which resets canvas dimensions and breaks the layout.
+            mainChart.config.lineAtIndex = tempLineIndx;
+            mainChart.update('none');   // 'none' skips animation
+            return;
+        }
+
+        // First-time creation
+        applyChartFontSize();
+        const ctx = myCanvas.getContext("2d");
+        mainChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels:   xvalues,
+                datasets: [{ backgroundColor: barColors, data: yvalues }]
+            },
+            label: 'Progress',
+            options: {
+                legend:    { display: false },
+                animation: false,
+                events:    enableClick ? ['click'] : [],
+                plugins:   { tooltip: { enabled: false } },
+                layout:    { padding: { top: bubbleHeadroomPx() } },
+                // precision 0: student counts are whole numbers, so no 0.2-step ticks on small classes
+                scales:    { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] },
+                // Window resized: the rem size may have changed, so rescale the
+                // chart's text and bubble headroom (runs before Chart.js re-lays out)
+                onResize:  (chart) => {
+                    applyChartFontSize();
+                    chart.options.layout.padding.top = bubbleHeadroomPx();
+                }
+            },
+            lineAtIndex: tempLineIndx,
+        });
+
+        // Attach bar-click handler once — closure over mainChart stays valid
+        // because we never replace the instance after first creation.
+        if (enableClick) {
+            myCanvas.onclick = (evt) => {
+                const res = mainChart.getElementsAtEventForMode(
+                    evt, 'nearest', { intersect: true }, true
+                );
+                if (res.length > 0) showModal(res[0]._index);
+            };
+        }
+    }
+
+    /**
+     * Master update function: recalculate populations, refresh all display elements,
+     * and redraw the histogram.  Called after any cutoff or keep-grade change.
+     */
+    function updateAfterCutoffChange() {
+        const graded = recalculateGradePopulation();
+        updateGradeDisplay();
+        calculateMGPV();
+        TFMGPV.innerHTML        = (Math.floor(MGPV * 100) / 100).toFixed(2);
+        totalStudentsGraded     = graded;
+        TFtotalGraded.innerHTML = graded;
+        redrawMainHistogram(true);
+    }
+
+    // =============================================================================
+    // SEARCH GRADES OVERLAY
+    // =============================================================================
+
+    /** Filter the student search table by name or ID as the user types. */
+    function spgSearch() {
+        const input  = document.getElementById("searchStudent");
+        const filter = input.value.toUpperCase();
+        const table  = document.getElementById("specialGradeTable");
+        const rows   = table.getElementsByTagName("tr");
+
+        for (let i = 0; i < rows.length; i++) {
+            // BUG FIX: previously `tdi` and `txtValuei` were implicit globals
+            const td  = rows[i].getElementsByTagName("td")[0];
+            const tdi = rows[i].getElementsByTagName("td")[1];
+            if (td && tdi) {
+                const txtValue  = td.textContent  || td.innerText;
+                const txtValuei = tdi.textContent || tdi.innerText;
+                const match = txtValue.toUpperCase().includes(filter)
+                           || txtValuei.toUpperCase().includes(filter);
+                rows[i].style.display = match ? "" : "none";
+            }
+        }
+    }
+
+    /** Show the student modal when a histogram bar is clicked. */
+    function showModal(clickedIdx) {
+        const students    = marksForHistogram[clickedIdx][2];
+        const marksClicked= clickedIdx + markLowest;
+
+        modalP.innerHTML  = students.map(s => s + "<br>").join('');
+        modalHeader.innerHTML = "List of students having marks: " + marksClicked;
+
+        const grade = getGradeFromMarks(marksClicked);
+        modalFooter.innerHTML = grade
+            ? "They currently have grade: " + grade
+            : "No grade is assigned for this mark range.";
+
+        modal.style.display = "block";
+    }
+
+    /**
+     * Populate the special-grade search table.
+     * BUG FIX: table rows are now cleared before redrawing so opening the overlay
+     * multiple times does not duplicate rows.
+     */
+    function drawTable() {
+        const table = document.getElementById("specialGradeTable");
+        // Clear all rows except the sticky header (row 0)
+        while (table.rows.length > 1) table.deleteRow(1);
+
+        // Letter-graded students
+        for (const entry of markMap) {
+            const [stID, stMarks, stName] = entry;
+            const stGrade = getGradeFromMarks(stMarks);
+            const row = table.insertRow(-1);
+            row.insertCell(0).innerHTML = stID;
+            row.insertCell(1).innerHTML = stName;
+            row.insertCell(2).innerHTML = stMarks;
+            row.insertCell(3).innerHTML = stGrade;
+        }
+        // Special-grade students (excluding W — withdrawn students have no marks)
+        for (const entry of spGMap) {
+            const [stID, stGrade, stName, stMarks] = entry;
+            if (stGrade === "W") continue;
+            const row = table.insertRow(-1);
+            row.insertCell(0).innerHTML = stID;
+            row.insertCell(1).innerHTML = stName;
+            row.insertCell(2).innerHTML = stMarks;
+            row.insertCell(3).innerHTML = stGrade;
+        }
+    }
+
+    function overlaySG() {
+        drawTable();
+        specialGradeDiv.style.visibility = "visible";
+    }
+    function dismissOverlaySG() { specialGradeDiv.style.visibility = "hidden"; }
+
+    // =============================================================================
+    // GRADE ANALYTICS OVERLAY
+    // =============================================================================
+
+    /** Open the Grade Analytics overlay, defaulting to histogram view. */
+    function overlayGA() {
+        // Label which grade band contains the average mark
+        let avgContainingGrade = '';
+        for (let i = 0; i < 7; i++) {
+            if (avgMarks >= gCutOffs[i] && avgMarks < gCutOffs[i + 1]) {
+                avgContainingGrade = gradeNames[i];
+            }
+        }
+        gaTopLabel.textContent =
+            "Grade Analytics — the average lies in grade: " + avgContainingGrade;
+        // The overlay always opens on the bar chart: record that, and reset the button
+        // label in case it was closed while showing the pie
+        isHistogram = true;
+        gaToggleButton.textContent = 'Show Pie Chart';
+        renderHistogram2();
+        gradeAnalyticsDiv.style.visibility = "visible";
+    }
+    function dismissOverlayGA() { gradeAnalyticsDiv.style.visibility = "hidden"; }
+
+    /** Toggle between bar-histogram and pie-chart views in the Analytics overlay. */
+    function toggleChart() {
+        if (isHistogram) {
+            renderPieChart2();
+            gaToggleButton.textContent = 'Show Histogram';
+        } else {
+            renderHistogram2();
+            gaToggleButton.textContent = 'Show Pie Chart';
+        }
+        isHistogram = !isHistogram;
+    }
+
+    /**
+     * Build chart data filtered to only active grades, then render using Chart.js.
+     * @param {string} type  - 'bar' or 'pie'
+     * @param {object} extra - extra Chart.js options
+     */
+    function renderAnalyticsChart(type, titleText, legendPosition) {
+        if (analyticsChart) analyticsChart.destroy();
+        const filteredPop    = gradePopulation.filter((_, i) => keepG[i]);
+        const filteredLabels = gradeNames.filter((_, i) => keepG[i]);
+        const filteredBg     = CHART_BG_COLORS.filter((_, i) => keepG[i]);
+        const filteredBorder = CHART_BORDER_COLORS.filter((_, i) => keepG[i]);
+
+        applyChartFontSize();
+        const ctx = gaGraphCanvas.getContext('2d');
+        analyticsChart = new Chart(ctx, {
+            type: type,
+            data: {
+                labels:   filteredLabels,
+                datasets: [{
+                    label:           'Grade Distribution',
+                    data:            filteredPop,
+                    backgroundColor: filteredBg,
+                    borderColor:     filteredBorder,
+                    borderWidth:     1
+                }]
+            },
+            // Chart.js 2.9 option names (top-level title/legend/tooltips, scales.yAxes);
+            // the v3-style plugins.* / scales.y keys used before were silently ignored
+            options: {
+                animation: false,
+                events:    ['click'],
+                layout:    { padding: { top: 20 } },
+                title:     { display: true, text: titleText, fontSize: Math.round(remPx()) },
+                legend:    { display: type === 'pie', position: legendPosition, align: 'start' },
+                tooltips:  { enabled: false },
+                scales: type === 'bar'
+                    // precision 0: whole-number student counts on the y-axis
+                    ? { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] }
+                    : {}
+            }
+        });
+    }
+
+    function renderHistogram2() {
+        renderAnalyticsChart('bar', 'Grade Distribution Histogram', 'bottom');
+    }
+    function renderPieChart2() {
+        renderAnalyticsChart('pie', 'Grade Distribution Pie Chart', 'left');
+    }
+
+    // =============================================================================
+    // EXPORT FUNCTIONS
+    // =============================================================================
+
+    /**
+     * Convert a 2D array into a CSV string.
+     * Skips undefined cells and blank rows.
+     */
+    function arrayToCSV(data) {
+        return data.map(row =>
+            row.filter(cell => typeof cell !== "undefined" && cell.toString().trim() !== "")
+               .join(",")
+        ).filter(row => row.trim() !== "").join("\n");
+    }
+
+    /**
+     * Fill grade and marks into retCSV rows for all letter-graded students,
+     * and special-grade codes for special-grade students.
+     * Alerts if a student in the ERP CSV cannot be found in either map.
+     */
+    function fillGradesIntoCSV() {
+        for (let i = 1; i < retCSV.length; i++) {
+            const idFromERP = retCSV[i][ERP_ID_COL];
+            if (typeof idFromERP === "undefined") continue;
+
+            const idxMM = indexFromMarkMap(idFromERP);
+            if (idxMM >= 0) {
+                // Letter-graded student — assign grade from current cutoffs
+                const studentM = markMap[idxMM][1];
+                const grade    = getGradeFromMarks(studentM);
+                if (grade) retCSV[i][ERP_GRADE_COL] = grade;
+                retCSV[i][ERP_MARKS_COL] = studentM;
+            } else {
+                // Special-grade student
+                const idxSP = indexFromSPGMap(idFromERP);
+                if (idxSP >= 0) {
+                    retCSV[i][ERP_GRADE_COL] = spGMap[idxSP][1];
+                    retCSV[i][ERP_MARKS_COL] = spGMap[idxSP][3];
+                } else {
+                    retCSV[i][ERP_GRADE_COL] = "W";
+                    retCSV[i][ERP_MARKS_COL] = 0;
+                    alert(`${idFromERP} is missing in your sheet but present in the ERP CSV.\nFix it manually!`);
+                }
+            }
+        }
+    }
+
+    /**
+     * Open a choice dialog: export directly or open sortStudents.html first.
+     */
+    function openExportOption() {
+        // Build overlay dialog
+        const dialog  = document.createElement('div');
+        Object.assign(dialog.style, {
+            position: 'fixed', top: '0', left: '0',
+            width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: '9999'
+        });
+
+        const content = document.createElement('div');
+        Object.assign(content.style, {
+            background: '#fff', padding: '1.875rem 2.5rem',
+            borderRadius: '8px', boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
+            textAlign: 'center'
+        });
+
+        const msg = document.createElement('div');
+        msg.textContent   = 'Choose export option:';
+        msg.style.cssText = 'margin-bottom:1.25rem; font-size:1.125rem';
+
+        const btnExport = document.createElement('button');
+        btnExport.textContent = 'Export Directly';
+        btnExport.className   = 'btn btn-success';
+        btnExport.style.margin = '0 10px';
+        btnExport.onclick = () => { document.body.removeChild(dialog); exportCSV(); };
+
+        const btnSort = document.createElement('button');
+        btnSort.textContent = 'Sort by Branch/Campus';
+        btnSort.className   = 'btn btn-primary';
+        btnSort.style.margin = '0 10px';
+        btnSort.onclick = () => {
+            document.body.removeChild(dialog);
+            fillGradesIntoCSV();   // mutate retCSV with current grades
+            const gradesToExport = { retCSV: retCSV, retCSVName: desFileName };
+            sessionStorage.setItem("gradeObject2", JSON.stringify(gradesToExport));
+            window.open('sortStudents.html', '_blank');
+        };
+
+        content.appendChild(msg);
+        content.appendChild(btnExport);
+        content.appendChild(btnSort);
+        dialog.appendChild(content);
+        document.body.appendChild(dialog);
+    }
+
+    /** Fill grades into retCSV and trigger a direct CSV download. */
+    function exportCSV() {
+        fillGradesIntoCSV();
+        // Open a preview tab (matches original behaviour)
+        const tab = window.open('about:blank', '_blank');
+        tab.document.write((arrayToCSV(retCSV)).replace(/(?:\r\n|\r|\n)/g, '<br>'));
+        tab.document.close();
+
+        // Trigger download
+        const uri  = "data:text/csv;charset=utf-8," + encodeURIComponent(arrayToCSV(retCSV));
+        const link = document.createElement('a');
+        link.setAttribute("href", uri);
+        link.setAttribute("download", desFileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
+    /** Serialise the full grade session to a timestamped JSON file for later use. */
+    function exportJSON() {
+        const savedDetails = {
+            code:        subjectCode,
+            subjectName: gradesDetails.subjectName,
+            fullMarks:   fullMarks,
+            mMap:        markMap,
+            retCSV:      retCSV,
+            specialG:    [0,0,0,0,0,0,0,0],
+            specialGMap: spGMap,
+            keepG:       keepG,
+            gCutOffs:    gCutOffs,
+            retCSVName:  desFileName
+        };
+
+        const now      = new Date();
+        const stamp    = `_JSON_saved_${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`
+                       + `-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+        const filename = subjectCode + stamp;
+        const uri      = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedDetails));
+
+        const link = document.createElement('a');
+        link.setAttribute("href", uri);
+        link.setAttribute("download", filename + ".json");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
+    /** Print the current view as a landscape PDF. */
+    function printpage() {
+        const style = document.createElement('style');
+        style.type  = 'text/css';
+        style.media = 'print';
+        style.appendChild(document.createTextNode('@page { size: landscape; }'));
+        document.head.appendChild(style);
+        window.print();
+    }
+
+    /**
+     * Open the NC cutoff dialog instead of printing directly.
+     * Called by the "Print PDF" button.
+     */
+    function showNCDialog() {
+        // Reset textarea and counter each time the dialog opens
+        const input   = document.getElementById('ncCutoffInput');
+        const counter = document.getElementById('ncCounter');
+        input.value   = '';
+        counter.textContent = '200 characters remaining';
+        new bootstrap.Modal(document.getElementById('ncDialog')).show();
+    }
+
+    /** Live character counter for the NC criterion textarea. */
+    function updateNCCounter() {
+        const input     = document.getElementById('ncCutoffInput');
+        const remaining = 200 - input.value.length;
+        document.getElementById('ncCounter').textContent =
+            remaining + ' character' + (remaining === 1 ? '' : 's') + ' remaining';
+    }
+
+    /**
+     * Dismiss the NC dialog, write the criterion text into divNCcutoff,
+     * swap the visibility of allControlsBelow ↔ divNCcutoff, then print.
+     */
+    function confirmAndPrint() {
+        // Close the Bootstrap modal
+        bootstrap.Modal.getInstance(document.getElementById('ncDialog')).hide();
+
+        const text = document.getElementById('ncCutoffInput').value.trim();
+
+        // Populate and reveal the print-only criterion div
+        document.getElementById('ncCutoffPrintText').textContent = text;
+        document.getElementById('allControlsBelow').style.display = 'none';
+        document.getElementById('divNCcutoff').style.display      = 'flex';
+
+        // Bootstrap's .hide() is asynchronous — wait for it to fully remove the
+        // backdrop div from the DOM before opening the print dialog, otherwise the
+        // semi-transparent backdrop tints the print preview.
+        document.getElementById('ncDialog').addEventListener('hidden.bs.modal', function onHidden() {
+            document.getElementById('ncDialog').removeEventListener('hidden.bs.modal', onHidden);
+            // Belt-and-suspenders: forcibly remove any lingering backdrop
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow   = '';
+            document.body.style.paddingRight = '';
+            printpage();
+        });
+    }
+
+    /**
+     * Dismiss the NC criterion div and restore the controls bar.
+     * Called by the ✕ button on divNCcutoff.
+     */
+    function hideNCCutoffDiv() {
+        document.getElementById('divNCcutoff').style.display      = 'none';
+        document.getElementById('allControlsBelow').style.display = '';
+    }
+
+    // =============================================================================
+    // LOOKUP HELPERS
+    // =============================================================================
+
+    /** Return the index of a student in markMap by ID, or -1 if not found. */
+    function indexFromMarkMap(stdID) {
+        for (let i = 0; i < markMap.length; i++) {
+            if (markMap[i][0] === stdID) return i;
+        }
+        return -1;
+    }
+
+    /** Return the index of a student in spGMap by ID, or -1 if not found. */
+    function indexFromSPGMap(stdID) {
+        for (let i = 0; i < spGMap.length; i++) {
+            if (spGMap[i][0] === stdID) return i;
+        }
+        return -1;
+    }
+
+    // =============================================================================
+    // GRADE CUTOFF EDITING
+    // =============================================================================
+
+    /**
+     * Find the nearest active grade to the LEFT of grade index n.
+     * Returns -1 if no active grade exists to the left.
+     */
+    function findImmediateLeft(n) {
+        for (let i = n - 1; i >= 0; i--) {
+            if (keepG[i]) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Find the nearest active grade to the RIGHT of grade index n.
+     * Returns 8 if no active grade exists to the right.
+     *
+     * BUG FIX: original had `toRet <= 8` which read keepG[8] (out of bounds).
+     * Corrected to `toRet < 8`.
+     */
+    function findImmediateRight(n) {
+        for (let i = n + 1; i < 8; i++) {    // BUG FIX: was i <= 8
+            if (keepG[i]) return i;
+        }
+        return 8;  // sentinel: no right neighbour
+    }
+
+    /** Count the number of currently active (kept) letter grades. */
+    function gradeCount() {
+        return keepG.filter(Boolean).length;
+    }
+
+    /**
+     * Handle a keep/remove checkbox change for grade index alteredGrade.
+     * Adjusts gCutOffs and keepG, then redraws.
+     */
+    function reDrawOnGradeAlter(alteredGrade) {
+        const gl = findImmediateLeft(alteredGrade);
+        const gr = findImmediateRight(alteredGrade);
+
+        // Determine the mark range available for this grade slot
+        const lb = (gl < 0) ? markLowest  : gCutOffs[gl];
+        const rb = (gr >= 8) ? markHighest : gCutOffs[gr];
+
+        const refKeep   = keepCheckboxes[alteredGrade];
+
+        if (refKeep.checked) {
+            // Instructor wants to re-enable this grade
+            if ((rb - lb) >= 2) {
+                keepG[alteredGrade]    = true;
+                // Place cutoff at midpoint of available range, or at markLowest if leftmost
+                gCutOffs[alteredGrade] = (gl < 0) ? markLowest : Math.floor((rb + lb) / 2);
+            } else {
+                alert("Cannot insert grade — please make room!");
+                refKeep.checked    = false;
+            }
+        } else {
+            // Instructor wants to remove this grade
+            if (gradeCount() === 1) {
+                alert("You must keep at least one grade!");
+                refKeep.checked    = true;
+            } else {
+                keepG[alteredGrade] = false;
+                // If this was the leftmost grade, the next active grade inherits markLowest
+                if (gl < 0) gCutOffs[gr] = markLowest;
+            }
+        }
+
+        updateAfterCutoffChange();
+    }
+
+    // Keep-grade checkboxes: each triggers a grade redraw
+    keepCheckboxes.forEach((cb, g) => {
+        cb.onchange = () => { if (initialLoadingDone) reDrawOnGradeAlter(g); };
+    });
+
+    // ── Hover popups on the grade tables ─────────────────────────────────────────
+    // One shared popup box (#gradeTip), filled on each hover so it always reflects
+    // the current cutoffs:
+    //  - letter-grade table: each grade's weight (grade points) in the MGPV;
+    //    the label column shows all weights and the whole formula
+    //  - non-letter table: IDs and names of the students with that grade;
+    //    the label column shows the count per grade
+    const gradeTip       = document.getElementById('gradeTip');
+    const letterTable    = document.getElementById('letterTable');
+    const nonLetterTable = document.getElementById('nonLetterTable');
+
+    // Non-letter grades in table column order (same order as the count cells)
+    const NON_LETTER_GRADES = ["W", "I", "NC", "GA", "RC", "DP", "TGA", "RRA"];
+    const TIP_MAX_STUDENTS  = 25;   // longer lists are cut off with "... and N more"
+
+    /** Escape text from the CSV (names, IDs) before putting it into the popup HTML. */
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>"]/g,
+            ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    }
+
+    /** Letter-grade popup HTML; col 0 is the label column, 1..8 are grades E..A. */
+    function mgpvTipHtml(col) {
+        let students = 0, weighted = 0;
+        for (let g = 0; g < 8; g++) {
+            if (!keepG[g]) continue;
+            students += gradePopulation[g];
+            weighted += gradePopulation[g] * gradePoints[g];
+        }
+
+        if (col === 0) {
+            const rows = [];
+            for (let g = 7; g >= 0; g--) {
+                rows.push(keepG[g]
+                    ? `<tr><td>${gradeNames[g]}</td><td class="num">${gradePoints[g]}</td>` +
+                      `<td>× ${gradePopulation[g]}</td><td class="num">= ${gradePoints[g] * gradePopulation[g]}</td></tr>`
+                    : `<tr><td>${gradeNames[g]}</td><td colspan="3">not in use</td></tr>`);
+            }
+            return `<div class="tip-title">MGPV weights (grade points)</div>` +
+                   `<table>${rows.join('')}</table>` +
+                   `<div style="margin-top:.4rem">MGPV = Σ(weight × students) / students<br>` +
+                   `= ${weighted} / ${students} = <b>${TFMGPV.textContent}</b></div>`;
+        }
+
+        const g = col - 1;
+        if (!keepG[g]) {
+            return `<div class="tip-title">Grade ${gradeNames[g]}</div>` +
+                   `Not in use: does not count towards the MGPV.`;
+        }
+        const n = gradePopulation[g], w = gradePoints[g];
+        const share = students > 0 ? (w * n / students).toFixed(2) : '0.00';
+        return `<div class="tip-title">Grade ${gradeNames[g]}</div>` +
+               `Weight in MGPV: <b>${w}</b> grade points<br>` +
+               `Students: ${n}<br>` +
+               `Weight × students: ${w} × ${n} = ${w * n}<br>` +
+               `Adds ${w * n} / ${students} = <b>${share}</b> to the MGPV (${TFMGPV.textContent})`;
+    }
+
+    /** Non-letter popup HTML; col 0 is the label column, 1..8 are W, I, NC, ... RRA. */
+    function nonLetterTipHtml(col) {
+        if (col === 0) {
+            const rows = NON_LETTER_GRADES.map(code =>
+                `<tr><td>${code}</td><td class="num">${spGMap.filter(e => e[1] === code).length}</td></tr>`);
+            return `<div class="tip-title grey">Non-letter grades</div>` +
+                   `<table>${rows.join('')}</table>` +
+                   `<div style="margin-top:.4rem">Hover a grade to list its students.</div>`;
+        }
+
+        const code     = NON_LETTER_GRADES[col - 1];
+        const students = spGMap.filter(e => e[1] === code);   // [id, grade, name, marks]
+        if (students.length === 0) {
+            return `<div class="tip-title grey">Grade ${code}</div>No students.`;
+        }
+        const rows = students.slice(0, TIP_MAX_STUDENTS).map(e =>
+            `<tr><td>${escapeHtml(e[0])}</td><td>${escapeHtml(e[2])}</td></tr>`);
+        const more = students.length > TIP_MAX_STUDENTS
+            ? `<div style="margin-top:.3rem">… and ${students.length - TIP_MAX_STUDENTS} more</div>` : '';
+        return `<div class="tip-title grey">Grade ${code}: ${students.length} student${students.length === 1 ? '' : 's'}</div>` +
+               `<table>${rows.join('')}</table>${more}`;
+    }
+
+    /** Keep the popup next to the pointer but inside the window. */
+    function placeGradeTip(evt) {
+        const gap = 14;
+        let x = evt.clientX + gap, y = evt.clientY + gap;
+        if (x + gradeTip.offsetWidth  > window.innerWidth)  x = evt.clientX - gap - gradeTip.offsetWidth;
+        if (y + gradeTip.offsetHeight > window.innerHeight) y = evt.clientY - gap - gradeTip.offsetHeight;
+        gradeTip.style.left = Math.max(0, x) + 'px';
+        gradeTip.style.top  = Math.max(0, y) + 'px';
+    }
+
+    /** Show the shared popup over a table; htmlFor(columnIndex) builds its content. */
+    function attachGradeTip(table, htmlFor) {
+        table.addEventListener('mouseover', (evt) => {
+            const cell = evt.target.closest('th, td');
+            if (!cell || !table.contains(cell)) return;
+            gradeTip.innerHTML     = htmlFor(cell.cellIndex);
+            gradeTip.style.display = 'block';
+            placeGradeTip(evt);
+        });
+        table.addEventListener('mousemove', placeGradeTip);
+        table.addEventListener('mouseleave', () => { gradeTip.style.display = 'none'; });
+    }
+    attachGradeTip(letterTable,    mgpvTipHtml);
+    attachGradeTip(nonLetterTable, nonLetterTipHtml);
+
+    // ── Draggable grade bubbles ──────────────────────────────────────────────────
+    // One "ball on a stick" per grade, sitting on top of its cutoff line.
+    // Dragging a bubble sideways moves that grade's cutoff (replaces the old
+    // change-grade radio buttons + slider).
+
+    // Ball height and the two stick lengths, in rem so they scale with the text.
+    // Consecutive active grades alternate between the short and long stick so
+    // that bubbles of neighbouring cutoffs do not overlap when close together.
+    const BUBBLE_BALL_REM  = 1.75;          // must match .grade-bubble .ball height
+    const BUBBLE_STICK_REM = [0.375, 2.25];
+
+    /** Current root font size in px (1rem), which follows the window size. */
+    function remPx() {
+        return parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+
+    /** Space (px) the main chart reserves above the plot area for the tallest bubble. */
+    function bubbleHeadroomPx() {
+        return Math.ceil((BUBBLE_STICK_REM[1] + BUBBLE_BALL_REM) * remPx()) + 4;
+    }
+
+    /**
+     * Chart.js v2 draws text in px (default 12px). Tie it to the rem size so
+     * axis labels, legends and titles scale like the rest of the page. Tick
+     * fonts are resolved from this global default at draw time, so updating
+     * it before a redraw also rescales an existing chart.
+     */
+    function applyChartFontSize() {
+        Chart.defaults.global.defaultFontSize = Math.round(remPx() * 0.75);
+    }
+
+    // Created once; positionGradeBubbles() only moves / shows / hides them, so a
+    // drag in progress keeps its pointer capture while the chart redraws.
+    const gradeBubbles = gradeNames.map((name, g) => {
+        const b = document.createElement('div');
+        b.className     = 'grade-bubble';
+        b.title         = `Drag to change the ${name} cutoff`;
+        b.style.display = 'none';
+        b.innerHTML     = `<div class="ball">${name}</div><div class="stick"></div>`;
+        b.addEventListener('pointerdown', (evt) => startBubbleDrag(evt, g));
+        bubbleArea.appendChild(b);
+        return b;
+    });
+
+    /**
+     * X position (chart pixels) of the cutoff line for histogram bar index
+     * pointIndex: the left edge of that bar. Shared by the line plugin and the
+     * bubbles so both always agree. Uses Chart.js v2 internals (_model).
+     */
+    function getCutoffX(chart, pointIndex) {
+        const data = chart.getDatasetMeta(0).data;
+        return data[pointIndex]._model.x - data[0]._model.width / 2;
+    }
+
+    /**
+     * Place each active grade's bubble on top of its cutoff line; hide the others.
+     * Positions are % of #gradeBubbleArea, which covers the box the chart is
+     * drawn into. (Chart.js lays out in chart.width x chart.height pixels, but
+     * the browser may draw that squeezed into a smaller box, e.g. because of
+     * the canvas's Bootstrap padding, or when printing; % stays correct.)
+     */
+    function positionGradeBubbles(chart) {
+        const plotTop = chart.scales['y-axis-0'].top;
+
+        let tier = 0;
+        for (let g = 0; g < 8; g++) {
+            const b = gradeBubbles[g];
+            if (!keepG[g]) { b.style.display = 'none'; continue; }
+            b.style.display = '';
+            b.style.left    = (getCutoffX(chart, gCutOffs[g] - markLowest) / chart.width  * 100) + '%';
+            b.style.top     = (plotTop / chart.height * 100) + '%';
+            b.querySelector('.stick').style.height = BUBBLE_STICK_REM[tier % 2] + 'rem';
+            tier++;
+        }
+    }
+
+    /**
+     * Start dragging grade g's bubble. While the pointer moves, the cutoff snaps
+     * to the nearest bar edge, kept strictly between the neighbouring active
+     * grades' cutoffs (same limits the old slider used).
+     * Pointer events cover mouse, touch and pen.
+     */
+    function startBubbleDrag(evt, g) {
+        evt.preventDefault();
+        const b = gradeBubbles[g];
+        b.setPointerCapture(evt.pointerId);
+        b.classList.add('dragging');
+
+        const gl     = findImmediateLeft(g);
+        const gr     = findImmediateRight(g);
+        const minIdx = (gl < 0)  ? 0                        : gCutOffs[gl] - markLowest + 1;
+        const maxIdx = (gr >= 8) ? markHighest - markLowest : gCutOffs[gr] - markLowest - 1;
+
+        const onMove = (e) => {
+            // Pointer position converted to chart pixels
+            const area = bubbleArea.getBoundingClientRect();
+            const x    = (e.clientX - area.left) / area.width * mainChart.width;
+            let best = minIdx, bestDist = Infinity;
+            for (let i = minIdx; i <= maxIdx; i++) {
+                const d = Math.abs(getCutoffX(mainChart, i) - x);
+                if (d < bestDist) { bestDist = d; best = i; }
+            }
+            if (best + markLowest !== gCutOffs[g]) {
+                gCutOffs[g] = best + markLowest;
+                updateAfterCutoffChange();
+            }
+        };
+        const onUp = () => {
+            b.classList.remove('dragging');
+            b.removeEventListener('pointermove',   onMove);
+            b.removeEventListener('pointerup',     onUp);
+            b.removeEventListener('pointercancel', onUp);
+        };
+        b.addEventListener('pointermove',   onMove);
+        b.addEventListener('pointerup',     onUp);
+        b.addEventListener('pointercancel', onUp);
+    }
+
+    // =============================================================================
+    // CHART.JS VERTICAL LINE PLUGIN
+    // Draws grade cutoff lines and labels on the main histogram.
+    // Uses Chart.js v2 internal _model API — works with chart version 2.9.4.
+    // =============================================================================
+    const verticalLinePlugin = {
+        /** Draw a single vertical cutoff line (the grade name is on its bubble). */
+        renderVerticalLine(chartInstance, pointIndex) {
+            const lineX      = getCutoffX(chartInstance, pointIndex);
+            const scale      = chartInstance.scales['y-axis-0'];
+            const ctx        = chartInstance.chart.ctx;
+
+            ctx.beginPath();
+            ctx.lineWidth   = 2;
+            ctx.strokeStyle = '#000088';
+            ctx.moveTo(lineX, scale.top);
+            ctx.lineTo(lineX, scale.bottom);
+            ctx.stroke();
+        },
+
+        afterDatasetsDraw(chart) {
+            if (chart.config.lineAtIndex) {
+                chart.config.lineAtIndex.forEach(
+                    idx => this.renderVerticalLine(chart, idx)
+                );
+            }
+            // Runs after every draw of the main chart (first render, cutoff
+            // changes, window resize), so the bubbles always follow the lines.
+            if (chart.canvas === myCanvas) positionGradeBubbles(chart);
+        }
+    };
+    Chart.plugins.register(verticalLinePlugin);
+
+    // =============================================================================
+    // INITIAL LOAD
+    // =============================================================================
+
+    /**
+     * Called once on page load via onload="loadAtStart()".
+     * Reads grade data from sessionStorage, computes initial histogram bins,
+     * and renders the first chart.
+     */
+    function loadAtStart() {
+        // Unpack grade session data
+        subjectCode  = gradesDetails.code;
+        markMap      = gradesDetails.mMap;
+        fullMarks    = gradesDetails.fullMarks;
+        retCSV       = gradesDetails.retCSV;
+        specialG     = gradesDetails.specialG;
+        spGMap       = gradesDetails.specialGMap;
+        keepG        = gradesDetails.keepG;
+        gCutOffs     = gradesDetails.gCutOffs;
+        desFileName  = gradesDetails.retCSVName;
+
+        document.title          = subjectCode + "_histogram";
+        TFSubjectName.innerHTML = subjectCode + " " + gradesDetails.subjectName;
+        TFMaxMarks.innerHTML    = fullMarks;
+
+        // Find min and max marks across all students
+        for (const entry of markMap) {
+            const m = entry[1];
+            if (m < markLowest)  markLowest  = m;
+            if (m > markHighest) markHighest = m;
+        }
+        // Per AUGSD: extend range by ±5 marks (clamped to [0, fullMarks])
+        markLowest  = Math.max(0, markLowest  - 5);
+        markHighest = Math.min(fullMarks, markHighest + 5);
+
+        // If no cutoffs were saved (new grade session), space them evenly
+        if (gCutOffs.length === 0) {
+            const step = Math.floor((markHighest - markLowest) / 8);
+            for (let i = 0; i < 8; i++) {
+                gCutOffs[i] = markLowest + i * step;
+            }
+        }
+
+        // Calculate average and build marks distribution
+        avgMarks          = 0;
+        let tsgTemp       = 0;   // BUG FIX: was an implicit global
+        marksDistribution = new Array(fullMarks + 1).fill(0);
+
+        for (const entry of markMap) {
+            marksDistribution[entry[1]]++;
+            avgMarks += entry[1];
+            tsgTemp++;
+        }
+        totalStudentsGraded = tsgTemp;
+        avgMarks = tsgTemp > 0 ? avgMarks / tsgTemp : 0;
+        TFAvgMarks.innerHTML = avgMarks.toFixed(2);
+
+        // Recalculate grade populations (fills gradePopulation[])
+        recalculateGradePopulation();
+        updateGradeDisplay();
+
+        // Sync keep-grade checkboxes with loaded keepG state
+        keepCheckboxes.forEach((cb, g) => { cb.checked = keepG[g]; });
+
+        // Tally special grades for the non-letter grade count panel
+        const spgCells  = [tfCountW, tfCountI, tfCountNC, tfCountGA, tfCountRC, tfCountTP, tfCountTGA, tfCountRRA];
+        const spgCounts = new Array(8).fill(0);
+        for (const entry of spGMap) {
+            const idx = NON_LETTER_GRADES.indexOf(entry[1]);
+            if (idx >= 0) spgCounts[idx]++;
+        }
+        spgCells.forEach((cell, i) => { cell.innerHTML = spgCounts[i]; });
+
+        const totalSpecialGrades = spgCounts.reduce((a, b) => a + b, 0);
+        TFtotalStudents.innerHTML = totalSpecialGrades + totalStudentsGraded;
+        TFtotalGraded.innerHTML   = totalStudentsGraded;
+
+        // Build the histogram data arrays (one entry per integer mark value)
+        for (let mark = markLowest; mark <= markHighest; mark++) {
+            const students = markMap
+                .filter(e => e[1] === mark)
+                .map(e => e[0] + ' : ' + e[2]);
+            xvalues.push('' + mark);
+            yvalues.push(students.length);
+            marksForHistogram.push(['' + mark, students.length, students]);
+        }
+
+        // Calculate and display MGPV
+        calculateMGPV();
+        TFMGPV.innerHTML = Math.floor(MGPV * 100) / 100;
+
+        // Draw the initial histogram
+        redrawMainHistogram(true);
+
+        initialLoadingDone = true;
+    }
+
+    </script>
+</body>
+</html>
