@@ -31,6 +31,7 @@
     .help-section h2 { color: #000080; font-size: 1.35rem; margin-bottom: .75rem; }
     .help-section h3 { font-size: 1.05rem; margin-top: 1rem; }
     .help-section table { width: auto; }
+    .practice-table td a { font-size: .85em; }   /* long sample file names; <wbr> after each _ lets them wrap */
     .note    { border-left: 4px solid #cc7000; background: #fff6ea; padding: .5rem .75rem; margin: .75rem 0; }
     .warning { border-left: 4px solid #c00000; background: #fdeaea; padding: .5rem .75rem; margin: .75rem 0; }
     code { color: #6f1d6f; }
@@ -112,6 +113,44 @@
         <li>Drag the grade bubbles above the chart to set the cutoffs.</li>
         <li>Click <b>Save Grades</b> to keep a JSON backup, then <b>Save ERP CSV</b> to get the file for ERP.</li>
     </ol>
+    <p>No files of your own yet? Download a practice pair from <a href="#practice">Practice files</a>.</p>
+</section>
+
+<section class="help-section" id="practice">
+    <h2>Practice files (sample marks and ERP files)</h2>
+    <p>If you do not have files of your own yet, download a pair below and try the whole system with them. The
+       students, IDs and marks are <b>made up</b> (all Hyderabad campus IDs); no real student data is used.
+       Each course has a <b>marks file</b> (Student ID and Marks columns, the kind of sheet you keep yourself) and
+       the matching <b>ERP file</b> (the student list as downloaded from ERP, with empty Total marks and Grade
+       columns except for withdrawn students).</p>
+    <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle practice-table">
+        <tr><th>Course</th><th>Marks file</th><th>ERP file</th><th>Students</th><th>Maximum marks</th>
+            <th>W (withdrawn)</th><th>Very low marks*</th><th>Notes</th></tr>
+        <tr><td><b>CS F407</b><br>Artificial Intelligence</td><td><a href="sample_marks_files/CS_F407_30students_max200.csv" download>CS_<wbr>F407_<wbr>30students_<wbr>max200.csv</a></td><td><a href="sample_erp_files/H6576_CS_F407_6062_MIDSEM.csv" download>H6576_<wbr>CS_<wbr>F407_<wbr>6062_<wbr>MIDSEM.csv</a></td><td>30</td><td>200</td><td>1</td><td>1</td><td>Very small class: try how few students each grade gets.</td></tr>
+        <tr><td><b>CS F301</b><br>Principles of Programming Languages</td><td><a href="sample_marks_files/CS_F301_50students_max200.csv" download>CS_<wbr>F301_<wbr>50students_<wbr>max200.csv</a></td><td><a href="sample_erp_files/H5359_CS_F301_3037_MIDSEM.csv" download>H5359_<wbr>CS_<wbr>F301_<wbr>3037_<wbr>MIDSEM.csv</a></td><td>50</td><td>200</td><td>2</td><td>1</td><td>Small class.</td></tr>
+        <tr><td><b>CS F211</b><br>Data Structures and Algorithms</td><td><a href="sample_marks_files/CS_F211_150students_max300.csv" download>CS_<wbr>F211_<wbr>150students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H6176_CS_F211_9923_MIDSEM.csv" download>H6176_<wbr>CS_<wbr>F211_<wbr>9923_<wbr>MIDSEM.csv</a></td><td>150</td><td>300</td><td>5</td><td>2</td><td>Medium class.</td></tr>
+        <tr><td><b>CS F213</b><br>Object Oriented Programming</td><td><a href="sample_marks_files/CS_F213_300students_max300.csv" download>CS_<wbr>F213_<wbr>300students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H5909_CS_F213_7513_MIDSEM.csv" download>H5909_<wbr>CS_<wbr>F213_<wbr>7513_<wbr>MIDSEM.csv</a></td><td>300</td><td>300</td><td>8</td><td>4</td><td>Large class.</td></tr>
+        <tr><td><b>MATH F111</b><br>Mathematics I</td><td><a href="sample_marks_files/MATH_F111_500students_max300.csv" download>MATH_<wbr>F111_<wbr>500students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H4827_MATH_F111_6784_MIDSEM.csv" download>H4827_<wbr>MATH_<wbr>F111_<wbr>6784_<wbr>MIDSEM.csv</a></td><td>500</td><td>300</td><td>12</td><td>8</td><td>First-year course.</td></tr>
+        <tr><td><b>CHEM F111</b><br>General Chemistry</td><td><a href="sample_marks_files/CHEM_F111_800students_max300.csv" download>CHEM_<wbr>F111_<wbr>800students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H8107_CHEM_F111_1502_MIDSEM.csv" download>H8107_<wbr>CHEM_<wbr>F111_<wbr>1502_<wbr>MIDSEM.csv</a></td><td>800</td><td>300</td><td>15</td><td>12</td><td>Very large first-year course; a saved JSON of it is also below.</td></tr>
+    </table>
+    </div>
+    <p>* Students with less than 40% of the class median, i.e. candidates for an NC grade (see
+       <a href="#search-edit">Search/Edit Grades</a>).</p>
+    <h3>How to practise</h3>
+    <ol>
+        <li>Download both files of one course (keep the ERP file's name as it is: the course code is read from it).</li>
+        <li>Open the marks file in Excel, LibreOffice or Google Sheets and copy its two columns, including the
+            header row.</li>
+        <li>On the home page click <b>New Grade</b>, enter the course name and the maximum marks from the table,
+            paste the marks and choose starting row <b>2</b>.</li>
+        <li>Choose and submit the ERP file, then click <b>Show Histogram</b>. The withdrawn students are listed in
+            the Special Grades window; they appear in the marks file too, but are kept out of the histogram
+            because ERP already gives them W.</li>
+    </ol>
+    <p>To try <b>View Grades</b>, download the saved grades file
+       <a href="sample_jsons/CHEM%20F111_JSON_saved_3-11-2026-13-38-36.json" download>CHEM F111_JSON_saved_3-11-2026-13-38-36.json</a>
+       (General Chemistry, 800 students, already set up) and open it from the home page.</p>
 </section>
 
 <section class="help-section" id="home">
@@ -119,7 +158,8 @@
     <ul>
         <li><b>New Grade</b>: start grading a course from marks and an ERP file.</li>
         <li><b>View Grades</b>: open a JSON file saved earlier with <b>Save Grades</b> and continue
-            from exactly where you left off (cutoffs, non-letter grades, title).</li>
+            from exactly where you left off (cutoffs, non-letter grades, title). A file that is not a valid
+            grades file, or that lists the same student more than once, is refused with a message.</li>
         <li><b>Help</b>: this page.</li>
     </ul>
 </section>
@@ -152,6 +192,13 @@
        <code>2023A7PS0412H</code>). Rows with an invalid or empty ID are shown in red with a message, and
        <b>Show Histogram</b> will not continue until they are fixed in your sheet and pasted again.
        Completely empty rows are ignored.</p>
+    <h3>Duplicate ID check</h3>
+    <p>Each student may appear on only one pasted row. If the same student is on two or more rows, those rows
+       are shown in red, the message lists them (for example <code>2023A7PS0412H (rows 5, 9)</code>), and
+       <b>Show Histogram</b> will not continue until you keep one row per student and paste again. IDs count as
+       the same student when the year, roll number and campus letter agree (see
+       <a href="#matching">How students are matched</a>), so <code>2023A7PS0412H</code> and
+       <code>2023B4A70412H</code> are duplicates.</p>
     <h3>Coming back with the Back button</h3>
     <p>The New Grade and View Grades pages are cleared every time they are opened, including with the
        browser's Back button, so details from a previous course are never reused by mistake.</p>
@@ -173,6 +220,11 @@
         <tr><td>8th</td><td>Grade</td><td>Read on load (non-letter grades such as W); filled in on export</td></tr>
     </table>
     <p>Other columns are kept as they are and written back unchanged.</p>
+    <h3>Duplicate students in the ERP file</h3>
+    <p>When the ERP file is submitted, it is checked for students listed more than once (same year, roll number
+       and campus letter). Such a file is rejected with a message naming the student(s) and the line numbers in
+       the file, because grades are written back by ID and a duplicate would make the result ambiguous. Download
+       a fresh copy from ERP, or delete the extra lines (without renaming the file), and submit it again.</p>
 </section>
 
 <section class="help-section" id="matching">
@@ -374,6 +426,15 @@
         <dd>The rows shown in red have an ID that is not 13 characters in the form year + programme code + roll
             number + campus letter (for example a missing digit, or a name in the ID column). Correct them in your
             sheet, paste again and choose the starting row.</dd>
+        <dt>“student(s) appear on more than one pasted row”</dt>
+        <dd>The same student (same year, roll number and campus letter) is on two or more of the red rows. Keep one
+            row per student in your sheet, paste again and choose the starting row.</dd>
+        <dt>“The ERP file … lists student(s) more than once”</dt>
+        <dd>The ERP file has the same student on more than one line. Download it again from ERP, or remove the
+            extra lines without renaming the file.</dd>
+        <dt>View Grades says the file lists students more than once, or is not valid</dt>
+        <dd>The JSON file is damaged or was edited by hand. Use another saved copy (for example an
+            <code>AUTO_BACKUP_</code> file), or create the grades again with New Grade.</dd>
         <dt>The paste was rejected</dt>
         <dd>Copy only the Student ID and Marks columns. Rows shown in red have extra columns.</dd>
         <dt>“… is missing in your sheet but present in the ERP CSV”</dt>
