@@ -53,7 +53,7 @@ A simple, browser-based tool to help instructors **upload marks, visualize distr
 - Load a previously saved JSON file
 
 #### 🧪 Practice data
-Synthetic sample files (no real students) for practising, also linked from the Help page:
+Synthetic sample files (no real students; 30 to 800 per course, including CS F101 with a transfer `…GH` student and NC candidates) for practising, also linked from the Help page:
 - `sample_marks_files/`: Student ID + Marks sheets (`<COURSE>_<N>students_max<M>.csv`)
 - `sample_erp_files/`: the matching ERP CSVs (keep their names; the course code is read from them)
 - `sample_jsons/`: a saved grades file to open with View Grades
@@ -77,8 +77,10 @@ Also works on:
 - 🔠 Pasted IDs are converted to capital letters and checked against the BITS ID format (e.g. `2023A7PS0412H`) before the histogram opens
 - 🔄 The New Grade and View Grades pages are cleared when you come back to them (including with the browser's Back button)
 - 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored
+- 🎓 Transfer students' IDs may end in two or three different campus letters from G, H, P (e.g. `2023A7PS0412GH`, `…HP`, `…GHP`); these are accepted and matched on the full campus part
+- 🧮 **NC Calculator** (histogram page, left button): NC line = 40% of the median marks or 30% of the average of the top K students (K of your choice), lists the students below it, and can shade the NC zone light red on the histogram
 - 🚫 Duplicate students are refused: the same student on two pasted rows, twice in the ERP file, or twice in a saved JSON (compared on year + roll number + campus, like matching)
-- 🧪 Try with a small dataset first: the **Practice files** section of the Help page has made-up marks and ERP files (30 to 800 students) and a saved JSON to download
+- 🧪 Try with a small dataset first: the **Practice files** section of the Help page has made-up marks and ERP files (7 courses, 30 to 800 students) and a saved JSON to download
 
 ---
 

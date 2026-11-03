@@ -119,7 +119,7 @@
 <section class="help-section" id="practice">
     <h2>Practice files (sample marks and ERP files)</h2>
     <p>If you do not have files of your own yet, download a pair below and try the whole system with them. The
-       students, IDs and marks are <b>made up</b> (all Hyderabad campus IDs); no real student data is used.
+       students, IDs and marks are <b>made up</b> (Hyderabad campus IDs, plus one Goa-to-Hyderabad transfer student in CS F101); no real student data is used.
        Each course has a <b>marks file</b> (Student ID and Marks columns, the kind of sheet you keep yourself) and
        the matching <b>ERP file</b> (the student list as downloaded from ERP, with empty Total marks and Grade
        columns except for withdrawn students).</p>
@@ -132,11 +132,12 @@
         <tr><td><b>CS F211</b><br>Data Structures and Algorithms</td><td><a href="sample_marks_files/CS_F211_150students_max300.csv" download>CS_<wbr>F211_<wbr>150students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H6176_CS_F211_9923_MIDSEM.csv" download>H6176_<wbr>CS_<wbr>F211_<wbr>9923_<wbr>MIDSEM.csv</a></td><td>150</td><td>300</td><td>5</td><td>2</td><td>Medium class.</td></tr>
         <tr><td><b>CS F213</b><br>Object Oriented Programming</td><td><a href="sample_marks_files/CS_F213_300students_max300.csv" download>CS_<wbr>F213_<wbr>300students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H5909_CS_F213_7513_MIDSEM.csv" download>H5909_<wbr>CS_<wbr>F213_<wbr>7513_<wbr>MIDSEM.csv</a></td><td>300</td><td>300</td><td>8</td><td>4</td><td>Large class.</td></tr>
         <tr><td><b>MATH F111</b><br>Mathematics I</td><td><a href="sample_marks_files/MATH_F111_500students_max300.csv" download>MATH_<wbr>F111_<wbr>500students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H4827_MATH_F111_6784_MIDSEM.csv" download>H4827_<wbr>MATH_<wbr>F111_<wbr>6784_<wbr>MIDSEM.csv</a></td><td>500</td><td>300</td><td>12</td><td>8</td><td>First-year course.</td></tr>
+        <tr><td><b>CS F101</b><br>Computer Programming</td><td><a href="sample_marks_files/CS_F101_750students_max300.csv" download>CS_<wbr>F101_<wbr>750students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H3391_CS_F101_4021_MIDSEM.csv" download>H3391_<wbr>CS_<wbr>F101_<wbr>4021_<wbr>MIDSEM.csv</a></td><td>750</td><td>300</td><td>14</td><td>2</td><td>Has a transfer student with ID ending in <b>GH</b> (<code>2025A7PS1196GH</code>). Try the <a href="#nc-calculator">NC Calculator</a>: 2 students are below 40% of the median, 3 below 30% of the top-3 average.</td></tr>
         <tr><td><b>CHEM F111</b><br>General Chemistry</td><td><a href="sample_marks_files/CHEM_F111_800students_max300.csv" download>CHEM_<wbr>F111_<wbr>800students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H8107_CHEM_F111_1502_MIDSEM.csv" download>H8107_<wbr>CHEM_<wbr>F111_<wbr>1502_<wbr>MIDSEM.csv</a></td><td>800</td><td>300</td><td>15</td><td>12</td><td>Very large first-year course; a saved JSON of it is also below.</td></tr>
     </table>
     </div>
-    <p>* Students with less than 40% of the class median, i.e. candidates for an NC grade (see
-       <a href="#search-edit">Search/Edit Grades</a>).</p>
+    <p>* Students with less than 40% of the class median, i.e. candidates for an NC grade (see the
+       <a href="#nc-calculator">NC Calculator</a> and <a href="#search-edit">Search/Edit Grades</a>).</p>
     <h3>How to practise</h3>
     <ol>
         <li>Download both files of one course (keep the ERP file's name as it is: the course code is read from it).</li>
@@ -189,7 +190,9 @@
     <h3>ID format check</h3>
     <p>Once the starting row is chosen, every student ID is checked against the BITS format: a 4-digit year,
        a 4-character programme code, a 4-digit roll number and a campus letter (13 characters, such as
-       <code>2023A7PS0412H</code>). Rows with an invalid or empty ID are shown in red with a message, and
+       <code>2023A7PS0412H</code>). <b>Transfer students</b> end in two or three different campus letters from
+       G, H and P instead, in any order (for example <code>2023A7PS0412GH</code>, <code>…HP</code>,
+       <code>…GHP</code>); see <a href="#student-id">Student ID format</a>. Rows with an invalid or empty ID are shown in red with a message, and
        <b>Show Histogram</b> will not continue until they are fixed in your sheet and pasted again.
        Completely empty rows are ignored.</p>
     <h3>Duplicate ID check</h3>
@@ -232,7 +235,8 @@
     <p>The ERP list decides who is in the course. For every student in the ERP file:</p>
     <ul>
         <li>The student's ID is looked up in your pasted marks. IDs are matched on the <b>year of admission,
-            roll number and campus letter</b> only (for <code>2023A7PS0412H</code>: 2023, 0412 and H). The
+            roll number and campus letter(s)</b> only (for <code>2023A7PS0412H</code>: 2023, 0412 and H; for a
+            transfer student's <code>2023A7PS0412GH</code>: 2023, 0412 and GH, so it does not match …0412H). The
             programme code in the middle (A7PS, B4A7, …) is ignored, as are upper/lower case and spaces, so
             a student whose branch is written differently in your sheet and in ERP still matches. The ID
             shown and exported is always the one from the ERP file.</li>
@@ -327,8 +331,33 @@
         <li>Hover over the <b>Non Letter Grades</b> table to see the ID and name of every student with a
             given grade (the first 25 are listed, then “… and N more”).</li>
     </ul>
-    <p class="note">A common guideline: students scoring below <b>40% of the class median</b> are given
-       <b>NC</b>. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
+    <p class="note">Two common guidelines for <b>NC</b>: marks below <b>40% of the class median</b>, or below
+       <b>30% of the average of the top K students</b>. The <a href="#nc-calculator">NC Calculator</a> works out
+       both. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
+</section>
+
+<section class="help-section" id="nc-calculator">
+    <h2>NC Calculator and NC zone</h2>
+    <p>Click <b>NC Calculator</b> (grey, at the left of the buttons below the histogram). Choose the rule for the
+       <b>NC line</b>:</p>
+    <ul>
+        <li><b>40% of the median marks</b>, or</li>
+        <li><b>30% of the average marks of the top K students</b>; type K in the box (3 to start with; a whole
+            number from 1 to the class size).</li>
+    </ul>
+    <p>The window shows how the line was worked out (the median or the top-K average), the <b>NC line</b>
+       itself, and the students with marks <b>below</b> it (ID, name, marks and their current grade). Marks are whole
+       numbers, so a line of 70.4 means 70 or less.</p>
+    <p>Turn on <b>Shade the NC zone on the histogram</b> to colour the chart light red from the left edge up to the NC
+       line, with a dashed red line at its edge. The shading follows the data as you work and is included in
+       <b>Print PDF</b>. Turn the switch off to remove it.</p>
+    <ul>
+        <li>The calculation uses the students in the histogram plus anyone already given NC (so giving NC in
+            Search/Edit Grades does not move the line); W and the other non-letter grades are left out.</li>
+        <li>The calculator does not change any grade. To give NC, use <a href="#search-edit">Search/Edit Grades</a>.</li>
+        <li>The chosen rule, K and the switch are kept when you refresh the page and are saved in the
+            <b>Save Grades</b> file.</li>
+    </ul>
 </section>
 
 <section class="help-section" id="search-edit">
@@ -401,16 +430,22 @@
 
 <section class="help-section" id="student-id">
     <h2>Student ID format</h2>
-    <p>BITS student IDs have 13 characters, for example <code>2023A7PS0412H</code>:</p>
+    <p>BITS student IDs have 13 characters, for example <code>2023A7PS0412H</code> (transfer students have
+       14 or 15, see below):</p>
     <table class="table table-sm table-bordered">
         <tr><th>Characters</th><th>Meaning</th><th>Example</th></tr>
         <tr><td>1–4</td><td>Year of admission</td><td>2023</td></tr>
         <tr><td>5–8</td><td>Programme: <code>A7PS</code> = single degree (A7), <code>B4A7</code> = dual degree (B4 and A7)</td><td>A7PS</td></tr>
         <tr><td>9–12</td><td>Roll number</td><td>0412</td></tr>
         <tr><td>13</td><td>Campus: H = Hyderabad, P = Pilani, G = Goa</td><td>H</td></tr>
+        <tr><td>13–15</td><td><b>Transfer students</b>: two or three different campus letters from G, H, P, in any
+            order (GH, HG, HP, GP, GHP, …)</td><td>GH</td></tr>
     </table>
+    <p>Any single letter is accepted as the campus; combinations must use only G, H and P, each at most once
+       (<code>GG</code> or <code>GX</code> is rejected). On the sort page a transfer student's campus is shown
+       as, for example, “Goa + Hyderabad”.</p>
     <p>Students are <b>matched</b> between your marks and the ERP file on the year, roll number and campus
-       letter only; the programme code (characters 5–8) is ignored for matching. The sort page uses the
+       letter(s) only (the campus part must be identical); the programme code (characters 5–8) is ignored for matching. The sort page uses the
        campus letter and programme code to group students by campus and branch.</p>
 </section>
 
@@ -423,8 +458,9 @@
         <dd>Those students are in the ERP list but were not found in your pasted marks (check that their year,
             roll number and campus letter match). Enter their marks, or Cancel and paste the complete list.</dd>
         <dt>“student ID(s) are not in BITS format”</dt>
-        <dd>The rows shown in red have an ID that is not 13 characters in the form year + programme code + roll
-            number + campus letter (for example a missing digit, or a name in the ID column). Correct them in your
+        <dd>The rows shown in red have an ID that is not in the form year + programme code + roll number + campus
+            letter, or two or three different letters from G, H, P for a transfer student (for example a missing
+            digit, a repeated campus letter, or a name in the ID column). Correct them in your
             sheet, paste again and choose the starting row.</dd>
         <dt>“student(s) appear on more than one pasted row”</dt>
         <dd>The same student (same year, roll number and campus letter) is on two or more of the red rows. Keep one
