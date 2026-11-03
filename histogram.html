@@ -1524,14 +1524,16 @@
 
     /**
      * Key used to match student IDs: year of admission (chars 1-4) + roll number
-     * (chars 9-12) + campus letter (char 13), ignoring case and surrounding spaces.
-     * The programme code (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose
-     * branch differs between the marks sheet and ERP still matches. An ID that is not
-     * 13 characters long is compared as a whole. (Same helper in new_grade_updated.html.)
+     * (chars 9-12) + campus part (char 13 on, one letter or a transfer student's
+     * GH / HP / GHP ...), ignoring case and surrounding spaces. The programme code
+     * (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose branch differs
+     * between the marks sheet and ERP still matches; the campus part must agree
+     * exactly. An ID that is not 13-15 characters long is compared as a whole.
+     * (Same helper in new_grade_updated.html and view_grade.html.)
      */
     function idMatchKey(id) {
         const clean = String(id).trim().toUpperCase();
-        return clean.length === 13 ? clean.slice(0, 4) + clean.slice(8) : clean;
+        return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
     }
 
     /** Return the index of a student in markMap by ID (matched with idMatchKey), or -1. */

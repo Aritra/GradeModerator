@@ -156,10 +156,22 @@
         const SPECIAL_GRADES = new Set(["W", "I", "NC", "GA", "RC", "DP", "TGA", "RRA"]);
 
         // BITS student ID: 4-digit year, 4-character programme code (A7PS, B4A7, H103,
-        // PHXF, ...), 4-digit roll number, campus letter; capitals only (13 characters)
-        const BITS_ID_RE  = /^\d{4}[A-Z0-9]{4}\d{4}[A-Z]$/;
+        // PHXF, ...), 4-digit roll number, then the campus part; capitals only. The
+        // campus part is one letter (13 characters), or for transfer students 2-3
+        // different letters from G, H, P in any order (GH, HP, GHP, ...): see isBitsId()
+        const BITS_ID_RE  = /^\d{4}[A-Z0-9]{4}\d{4}([A-Z]{1,3})$/;
         // A cell shaped like an ID in any letter case (used to capitalise pasted IDs)
-        const ID_SHAPE_RE = /^\d{4}[A-Za-z0-9]{4}\d{4}[A-Za-z]$/;
+        const ID_SHAPE_RE = /^\d{4}[A-Za-z0-9]{4}\d{4}[A-Za-z]{1,3}$/;
+
+        /** True if id (already upper-cased) is a valid BITS ID, including transfer-student endings. */
+        function isBitsId(id) {
+            const m = BITS_ID_RE.exec(id);
+            if (!m) return false;
+            const campus = m[1];
+            if (campus.length === 1) return true;
+            // Transfer students: each letter G, H or P, none repeated
+            return /^[GHP]+$/.test(campus) && new Set(campus).size === campus.length;
+        }
 
         // ── Initialisation ────────────────────────────────────────────────────────
 
@@ -418,7 +430,7 @@
             for (let i = chosenStartRow; i < csvSRCtxt.length; i++) {
                 const id = csvSRCtxt[i][0].trim();
                 if (id === '' && csvSRCtxt[i][1].trim() === '') continue;
-                if (!BITS_ID_RE.test(id)) bad.push(i);
+                if (!isBitsId(id)) bad.push(i);
             }
             return bad;
         }
@@ -429,7 +441,8 @@
             if (bad.length === 0) return '';
             const examples = bad.slice(0, 3).map(i => `row ${i + 1}: "${escapeHtml(csvSRCtxt[i][0]) || '(empty)'}"`).join(', ');
             return `❌ ${bad.length} student ID(s) are not in BITS format (shown in red; ${examples}${bad.length > 3 ? ', …' : ''}). ` +
-                   `IDs must look like 2023A7PS0412H: 4-digit year, 4-character programme code, 4-digit roll number and campus letter. ` +
+                   `IDs must look like 2023A7PS0412H: 4-digit year, 4-character programme code, 4-digit roll number and campus letter ` +
+                   `(transfer students may end in 2-3 different campus letters from G, H, P, e.g. 2023A7PS0412GH). ` +
                    `Fix them in your sheet and paste again.`;
         }
 
@@ -538,14 +551,16 @@
 
         /**
          * Key used to match student IDs: year of admission (chars 1-4) + roll number
-         * (chars 9-12) + campus letter (char 13), ignoring case and surrounding spaces.
-         * The programme code (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose
-         * branch differs between the marks sheet and ERP still matches. An ID that is not
-         * 13 characters long is compared as a whole. (Same helper in histogram.html.)
+         * (chars 9-12) + campus part (char 13 on, one letter or a transfer student's
+         * GH / HP / GHP ...), ignoring case and surrounding spaces. The programme code
+         * (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose branch differs
+         * between the marks sheet and ERP still matches; the campus part must agree
+         * exactly (H and GH are different students). An ID that is not 13-15 characters
+         * long is compared as a whole. (Same helper in histogram.html and view_grade.html.)
          */
         function idMatchKey(id) {
             const clean = String(id).trim().toUpperCase();
-            return clean.length === 13 ? clean.slice(0, 4) + clean.slice(8) : clean;
+            return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
         }
 
         function isSpecialGrade(gradeKey) {

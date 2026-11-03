@@ -40,13 +40,14 @@
         window.addEventListener('pageshow', () => { jsonFile.value = ''; demo.innerHTML = ''; });
 
         /**
-         * Key used to match student IDs: year (chars 1-4) + roll number + campus letter
-         * (chars 9-13), ignoring the programme code, case and spaces. Same helper as in
+         * Key used to match student IDs: year (chars 1-4) + roll number + campus part
+         * (chars 9 on; the campus part is one letter, or GH / HP / GHP ... for transfer
+         * students), ignoring the programme code, case and spaces. Same helper as in
          * new_grade_updated.html and histogram.html.
          */
         function idMatchKey(id) {
             const clean = String(id).trim().toUpperCase();
-            return clean.length === 13 ? clean.slice(0, 4) + clean.slice(8) : clean;
+            return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
         }
 
         function escapeHtml(str) {

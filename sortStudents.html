@@ -68,6 +68,8 @@
          *              dual degree:   chars [4..5] = branch1 code, chars [6..7] = branch2 code
          *   [8..11]  roll number       (4 digits,       e.g. "0042")
          *   [12]     campus            (1 letter:  H=Hyderabad, P=Pilani, G=Goa)
+         *   [12..14] transfer students end in 2-3 campus letters instead (GH, HP, GHP, ...),
+         *            so their IDs are 14 or 15 characters long
          *
          * ERP CSV column index of the student ID field:
          */
@@ -142,21 +144,21 @@
         // ── ID parsing ────────────────────────────────────────────────────────────
 
         /**
-         * Extract campus from a 13-character BITS student ID.
-         * Campus is always the last character (index 12).
+         * Extract campus from a BITS student ID: the letter(s) from index 12 on.
+         * Transfer students have 2-3 letters (e.g. GH), shown as "Goa + Hyderabad".
          *
          * @param  {string} id  Student ID (will be trimmed).
-         * @return {string}     Full campus name, or "Campus-X" if unrecognised.
+         * @return {string}     Full campus name(s), "Campus-X" for an unrecognised letter.
          */
         function getCampusFromID(id) {
             const clean = (id || '').trim();
-            if (clean.length !== 13) return 'Unknown';
-            const letter = clean[12].toUpperCase();
-            return CAMPUS_MAP[letter] || ('Campus-' + letter);
+            if (clean.length < 13 || clean.length > 15) return 'Unknown';
+            return clean.slice(12).toUpperCase().split('')
+                        .map(letter => CAMPUS_MAP[letter] || ('Campus-' + letter)).join(' + ');
         }
 
         /**
-         * Extract affiliation (branch / programme) from a 13-character BITS student ID.
+         * Extract affiliation (branch / programme) from a BITS student ID (13-15 characters).
          *
          * The 4-character affiliation field occupies indices [4..7]:
          *   chars [4..5] = primary branch code  (always present)
@@ -171,7 +173,7 @@
          */
         function getAffiliationFromID(id) {
             const clean = (id || '').trim();
-            if (clean.length !== 13) return { raw: '????', display: 'Unknown' };
+            if (clean.length < 13 || clean.length > 15) return { raw: '????', display: 'Unknown' };
 
             const aff   = clean.slice(4, 8).toUpperCase();  // 4-char affiliation field
             const code1 = aff.slice(0, 2);                  // primary branch
