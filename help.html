@@ -333,7 +333,7 @@
     </ul>
     <p class="note">Two common guidelines for <b>NC</b>: marks below <b>40% of the class median</b>, or below
        <b>30% of the average of the top K students</b>. The <a href="#nc-calculator">NC Calculator</a> works out
-       both. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
+       both (the percentage and K can be changed), and the red ✕ button next to it can give NC to everyone below the line. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
 </section>
 
 <section class="help-section" id="nc-calculator">
@@ -342,8 +342,8 @@
        <b>NC line</b>:</p>
     <ul>
         <li><b>40% of the median marks</b>, or</li>
-        <li><b>30% of the average marks of the top K students</b>; type K in the box (3 to start with; a whole
-            number from 1 to the class size).</li>
+        <li><b>a percentage of the average marks of the top K students</b>; type the percentage (30 to start
+            with; more than 0, at most 100) and K (3 to start with; a whole number from 1 to the class size).</li>
     </ul>
     <p>The window shows how the line was worked out (the median or the top-K average), the <b>NC line</b>
        itself, and the students with marks <b>below</b> it (ID, name, marks and their current grade). Marks are whole
@@ -354,10 +354,27 @@
     <ul>
         <li>The calculation uses the students in the histogram plus anyone already given NC (so giving NC in
             Search/Edit Grades does not move the line); W and the other non-letter grades are left out.</li>
-        <li>The calculator does not change any grade. To give NC, use <a href="#search-edit">Search/Edit Grades</a>.</li>
-        <li>The chosen rule, K and the switch are kept when you refresh the page and are saved in the
+        <li>The calculator itself does not change any grade. To give NC, use the red ✕ button (below) or
+            <a href="#search-edit">Search/Edit Grades</a>.</li>
+        <li>The chosen rule, percentage, K and the switch are kept when you refresh the page and are saved in the
             <b>Save Grades</b> file.</li>
     </ul>
+    <h3>Mark everyone in the NC zone as NC (red ✕ button)</h3>
+    <p>The red square button with a white cross, to the left of <b>NC Calculator</b>, gives NC to every
+       letter-graded student below the NC line in one step, using the rule, percentage and K currently chosen in the
+       NC Calculator (whether or not the shading is switched on). It asks first:
+       <i>“Mark everyone in NC zone as NC and redraw histogram and reset minimum marks in histogram?”</i>, and lists
+       the NC line and the students it will change. Click <b>Cancel</b> to leave everything as it is, or <b>Yes</b> to:</p>
+    <ol>
+        <li>download a backup of the current grades first, as a JSON file named <code>AUTO_BACKUP_</code> + the usual
+            Save Grades name (open it with View Grades to undo), exactly as in Search/Edit Grades;</li>
+        <li>give those students NC (they move to the Non Letter Grades table, keeping their marks);</li>
+        <li>redraw the histogram starting from the new lowest letter-graded mark (minus 5, as when the page opens;
+            the highest mark stays). If a grade cutoff would now be below the start of the chart, it is moved up to
+            the first mark of the chart, and cutoffs above it are nudged up only if needed to stay in order; check the
+            lowest grades' bubbles afterwards.</li>
+    </ol>
+    <p>If no letter-graded student is below the line, the dialog says so and <b>Yes</b> is disabled.</p>
 </section>
 
 <section class="help-section" id="search-edit">

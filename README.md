@@ -78,7 +78,8 @@ Also works on:
 - 🔄 The New Grade and View Grades pages are cleared when you come back to them (including with the browser's Back button)
 - 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored
 - 🎓 Transfer students' IDs may end in two or three different campus letters from G, H, P (e.g. `2023A7PS0412GH`, `…HP`, `…GHP`); these are accepted and matched on the full campus part
-- 🧮 **NC Calculator** (histogram page, left button): NC line = 40% of the median marks or 30% of the average of the top K students (K of your choice), lists the students below it, and can shade the NC zone light red on the histogram
+- 🧮 **NC Calculator** (histogram page, left button): NC line = 40% of the median marks or a percentage (30 by default) of the average of the top K students (both of your choice), lists the students below it, and can shade the NC zone light red on the histogram
+- ❌ The red ✕ button next to it gives NC to everyone below the NC line after a Yes/Cancel confirmation, downloads an `AUTO_BACKUP_` JSON first, and restarts the histogram at the new lowest mark
 - 🚫 Duplicate students are refused: the same student on two pasted rows, twice in the ERP file, or twice in a saved JSON (compared on year + roll number + campus, like matching)
 - 🧪 Try with a small dataset first: the **Practice files** section of the Help page has made-up marks and ERP files (7 courses, 30 to 800 students) and a saved JSON to download
 
