@@ -17,6 +17,14 @@
             color: #2c7da0;
             margin-top: 0.25rem;
         }
+        /* Preview table of the pasted marks data.
+           Rules target the <td>s (scoped to the id) because Bootstrap's .table
+           paints cell backgrounds and would hide a background set on the <tr>. */
+        #pastePreviewWrap { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+        #pastePreview td.paste-rownum { color: #6c757d; width: 4em; text-align: right; }
+        #pastePreview tr.paste-header > td { background-color: #0a1f66; color: #fff; font-weight: bold; }
+        #pastePreview tr.paste-data   > td { background-color: #fff9c4; }
+        #pastePreview tr.paste-bad    > td { background-color: #f8d7da; }
     </style>
 </head>
 <body onload="defaultState()">
@@ -63,7 +71,13 @@
                     <label for="pasteMarksData" class="form-label">Paste marks data (Excel / Google Sheets)</label>
                     <textarea id="pasteMarksData" class="form-control paste-area" rows="6"
                         placeholder="Copy cells from Excel or Google Sheets, then click here and press Ctrl+V (Cmd+V on Mac)&#10;The first column should be Student ID, the second column Marks."></textarea>
-                    <div class="info-paste">✅ Empty rows at the end are automatically removed. Data is taken from the first two columns only.</div>
+                    <div class="info-paste">✅ Empty rows at the start and end are automatically removed. Paste exactly two columns: Student ID and Marks.</div>
+                    <!-- Preview of the pasted data; rows are coloured once a starting row is chosen -->
+                    <div id="pastePreviewWrap" style="display:none;">
+                        <table id="pastePreview" class="table table-sm table-bordered mb-0">
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Starting Row selector (same as before) -->
@@ -79,6 +93,12 @@
 
                 <!-- Destination (ERP) CSV upload form (unchanged) -->
                 <div style="padding-top: 15px;">
+                    <label for="UploadDESFile" class="form-label mb-0">
+                        Select the student list CSV file downloaded from ERP (only .csv files are accepted).
+                    </label>
+                    <div class="text-danger fw-bold mb-1">
+                        Do not rename the ERP file: the subject code is read from its file name.
+                    </div>
                     <form id="formDES">
                         <input type="file" id="UploadDESFile" accept=".csv" style="width: 79.5%;" />
                         <input type="submit" id="desSubmitBtn" class="btn btn-primary"
@@ -113,6 +133,8 @@
         const subjectName   = document.getElementById("subjectName");
         const subjectMarks  = document.getElementById("subjectMarks");
         const pasteArea     = document.getElementById("pasteMarksData");
+        const pastePreviewWrap = document.getElementById("pastePreviewWrap");
+        const pastePreviewBody = document.querySelector("#pastePreview tbody");
 
         // ── State ─────────────────────────────────────────────────────────────────
         let chosenIDIdx     = 0;      // always first column (0)
@@ -217,6 +239,19 @@
                 return;
             }
 
+            // Drop trailing blank cells in each row (e.g. an empty extra column
+            // selected in Excel) so they do not count as a third column
+            tableData = tableData.map(row => {
+                const r = [...row];
+                while (r.length > 0 && r[r.length - 1].trim() === '') r.pop();
+                return r;
+            });
+
+            // Sanity check: exactly two columns (ID, Marks)
+            const badRows    = [];
+            tableData.forEach((row, i) => { if (row.length > 2) badRows.push(i); });
+            const hasTwoCols = tableData.some(row => row.length === 2);
+
             // Ensure each row has at least two columns (ID and Marks)
             const minCols = 2;
             for (let i = 0; i < tableData.length; i++) {
@@ -226,31 +261,96 @@
                 }
             }
 
-            // Store the processed data
-            csvSRCtxt = tableData;
+            // Grades work on whole marks only: round decimal marks (column 2) up
+            // to the next whole number, e.g. 45.2 -> 46. Integers and non-numeric
+            // cells (such as a "Marks" header) are left unchanged.
+            const DECIMAL_RE = /^[+-]?(\d+\.\d*|\.\d+)$/;
+            let roundedCount = 0;
+            tableData.forEach(row => {
+                const v = row[1].trim();
+                if (DECIMAL_RE.test(v)) {
+                    const ceiled = String(Math.ceil(parseFloat(v)));
+                    if (ceiled !== v) roundedCount++;
+                    row[1] = ceiled;
+                }
+            });
+
+            // Show the trimmed data in the textarea and in the preview table
+            pasteArea.value = tableData.map(row => row.join('\t')).join('\n');
+            renderPastePreview(tableData, badRows);
 
             // Reset start row selection and disable ERP upload until user picks a start row
             startChooser.selectedIndex = 0;   // back to "Starting Row number" (hidden)
             chosenStartRow = -1;
-            startChooser.disabled = false;    // now enabled
-            // Disable ERP upload until start row is chosen
             csvDESFile.disabled = true;
             desSubmit.disabled = true;
             showHistBtn.disabled = true;
 
+            if (badRows.length > 0 || !hasTwoCols) {
+                // Reject the paste: keep the start row selector disabled
+                csvSRCtxt = [];
+                startChooser.disabled = true;
+                document.getElementById("demo").innerHTML = badRows.length > 0
+                    ? `❌ ${badRows.length} row(s) have more than two columns (highlighted in red, e.g. row ${badRows[0] + 1}). Paste only the Student ID and Marks columns.`
+                    : "❌ Only one column was pasted. Paste two columns: Student ID and Marks.";
+                return;
+            }
+
+            // Store the processed data
+            csvSRCtxt = tableData;
+            startChooser.disabled = false;    // now enabled
+
             // Show confirmation
             const rowCount = csvSRCtxt.length;
-            const colCount = csvSRCtxt[0].length;
-            document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, ${colCount} columns. First column = ID, second column = Marks. Choose starting row.`;
+            const roundedMsg = roundedCount > 0
+                ? ` ${roundedCount} decimal mark(s) rounded up to whole numbers.`
+                : '';
+            document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, 2 columns. First column = ID, second column = Marks.${roundedMsg} Choose starting row.`;
+        }
+
+        /**
+         * Show the pasted rows as a table. The first cell is the 1-based row
+         * number, matching the "Starting Row number" dropdown.
+         * Rows listed in badRows (more than two columns) are shown in red.
+         */
+        function renderPastePreview(rows, badRows) {
+            pastePreviewBody.innerHTML = '';
+            rows.forEach((row, i) => {
+                const tr = document.createElement('tr');
+                if (badRows.includes(i)) tr.classList.add('paste-bad');
+
+                const tdNum = document.createElement('td');
+                tdNum.className   = 'paste-rownum';
+                tdNum.textContent = i + 1;
+                tr.appendChild(tdNum);
+
+                // All cells are shown so extra columns are visible when the check fails
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                pastePreviewBody.appendChild(tr);
+            });
+            pastePreviewWrap.style.display = rows.length > 0 ? '' : 'none';
+        }
+
+        /**
+         * Colour the preview rows for the chosen starting row:
+         * rows before it are headers (dark blue, bold white), the rest is data (light yellow).
+         * With no starting row chosen (chosenStartRow = -1) the colouring is removed.
+         */
+        function highlightPastePreview() {
+            Array.from(pastePreviewBody.rows).forEach((tr, i) => {
+                tr.classList.toggle('paste-header', chosenStartRow >= 0 && i <  chosenStartRow);
+                tr.classList.toggle('paste-data',   chosenStartRow >= 0 && i >= chosenStartRow);
+            });
         }
 
         // Attach paste listener to the textarea
         pasteArea.addEventListener('paste', (e) => {
             e.preventDefault();
-            handlePaste(e);
-            // Also update the textarea content (optional)
-            const pasted = e.clipboardData.getData('text/plain');
-            pasteArea.value = pasted;
+            handlePaste(e);   // also writes the trimmed data back into the textarea
         });
 
         // Also allow manual typing? Not needed, but clear the demo message on input
@@ -262,6 +362,7 @@
                 desSubmit.disabled = true;
                 showHistBtn.disabled = true;
                 document.getElementById("demo").innerHTML = "";
+                renderPastePreview([], []);
             }
         });
 
@@ -275,9 +376,11 @@
                 csvDESFile.disabled = true;
                 desSubmit.disabled = true;
                 showHistBtn.disabled = true;
+                highlightPastePreview();
                 return;
             }
             chosenStartRow = idx - 1;   // because index 0 is the hidden placeholder
+            highlightPastePreview();
             // Enable ERP file upload only after start row is chosen AND we have pasted data
             if (csvSRCtxt && csvSRCtxt.length > 0) {
                 enableDesSelector();
@@ -301,6 +404,18 @@
 
         // ── Special grade check ───────────────────────────────────────────────────
 
+        /**
+         * Key used to match student IDs: year of admission (chars 1-4) + roll number
+         * (chars 9-12) + campus letter (char 13), ignoring case and surrounding spaces.
+         * The programme code (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose
+         * branch differs between the marks sheet and ERP still matches. An ID that is not
+         * 13 characters long is compared as a whole. (Same helper in histogram.html.)
+         */
+        function idMatchKey(id) {
+            const clean = String(id).trim().toUpperCase();
+            return clean.length === 13 ? clean.slice(0, 4) + clean.slice(8) : clean;
+        }
+
         function isSpecialGrade(gradeKey) {
             return SPECIAL_GRADES.has(gradeKey);
         }
@@ -317,6 +432,13 @@
             e.preventDefault();
             const input = csvDESFile.files[0];
             if (!input) return;
+
+            // accept=".csv" only filters the file picker; "All files" can still be chosen
+            if (!/\.csv$/i.test(input.name)) {
+                document.getElementById("demo").innerHTML = "❌ The ERP file must be a .csv file.";
+                csvDESFile.value = "";
+                return;
+            }
 
             // Extract subject code from the ERP filename convention: ..._CODE_NAME_...csv
             desFileName  = input.name.split(/(\\|\/)/g).pop();
@@ -371,6 +493,7 @@
             // Build mark map: [studentID, marks, studentName]
             const specialGradeMap = [];
             const markMap         = [];
+            const missingStudents = [];   // in ERP, not pasted, not W: marks are asked for
             const specialGrades   = [0, 0, 0, 0, 0, 0, 0, 0];
             const keepGrades      = [true, true, true, true, true, true, true, true];
             const gradeCutOffs    = [];  // empty → histogram will compute even divisions
@@ -386,6 +509,7 @@
 
                 const cleanID   = idFromERP.trim();
                 const cleanName = nameFromERP.trim();
+                const erpKey    = idMatchKey(cleanID);
                 let studentFound = false;
 
                 // Search source (pasted) data for a matching student ID
@@ -393,59 +517,158 @@
                     const tempID = csvSRCtxt[i][chosenIDIdx];   // column 0 = ID
                     if (typeof tempID === "undefined") continue;
 
-                    const studentID    = tempID.trim();
                     const studentMarks = parseInt(csvSRCtxt[i][chosenMarksIdx], 10); // column 1 = marks
 
-                    if (studentID === cleanID) {
+                    // Match on year + roll number + campus only (see idMatchKey); the student
+                    // is stored with the ERP's ID so lists and exports use ERP's programme code
+                    if (idMatchKey(tempID) === erpKey) {
                         studentFound     = true;
                         const asPerERP   = csvDEStxt[j][ERP_GRADE_COL].trim();
                         if (typeof asPerERP === "undefined") break;
 
                         if (!isSpecialGrade(asPerERP)) {
                             // Normal graded student → goes into the histogram mark map
-                            markMap.push([studentID, studentMarks, cleanName]);
-                            console.log(`${studentID} pushed to normal list`);
+                            markMap.push([cleanID, studentMarks, cleanName]);
+                            console.log(`${cleanID} pushed to normal list`);
                         } else {
                             // Special grade student — listed separately for review
-                            specialGradeMap.push([studentID, asPerERP, cleanName, studentMarks]);
-                            console.log(`${studentID} pushed to special grades (${asPerERP})`);
+                            specialGradeMap.push([cleanID, asPerERP, cleanName, studentMarks]);
+                            console.log(`${cleanID} pushed to special grades (${asPerERP})`);
                         }
                         break;
                     }
                 }
 
                 if (!studentFound) {
-                    // Student in ERP but not in pasted data (e.g., withdrew before exam)
+                    // Student in ERP but not in the pasted marks. The ERP list is the master
+                    // list: withdrawn (W) students keep marks 0; everyone else is collected
+                    // so the instructor is asked for their marks before the histogram opens.
                     const asPerERP = csvDEStxt[j][ERP_GRADE_COL].trim();
                     console.log(`Student ${cleanID} not found in pasted marks data`);
-                    specialGradeMap.push([cleanID, asPerERP, cleanName, 0]);
+                    if (asPerERP === "W") specialGradeMap.push([cleanID, asPerERP, cleanName, 0]);
+                    else                  missingStudents.push({ id: cleanID, name: cleanName, erpGrade: asPerERP });
                 }
             }
+            // Pasted students who are not in the ERP list are ignored.
 
-            console.log(`Mark map length: ${markMap.length}`);
-            console.log(`Special grade map length: ${specialGradeMap.length}`);
+            // Continue once every ERP student has marks (asks for the missing ones first)
+            const proceed = () => {
+                console.log(`Mark map length: ${markMap.length}`);
+                console.log(`Special grade map length: ${specialGradeMap.length}`);
 
-            // Build the grade object to pass to histogram.html via sessionStorage
-            const gradesDetails = {
-                code:        subjectCode,
-                subjectName: subjectNameTxt,
-                fullMarks:   subjectMarksVal,
-                mMap:        markMap,
-                retCSV:      csvDEStxt,
-                specialG:    specialGrades,
-                specialGMap: specialGradeMap,
-                keepG:       keepGrades,
-                gCutOffs:    gradeCutOffs,
-                retCSVName:  desFileName
+                // Build the grade object to pass to histogram.html via sessionStorage
+                const gradesDetails = {
+                    code:        subjectCode,
+                    subjectName: subjectNameTxt,
+                    fullMarks:   subjectMarksVal,
+                    mMap:        markMap,
+                    retCSV:      csvDEStxt,
+                    specialG:    specialGrades,
+                    specialGMap: specialGradeMap,
+                    keepG:       keepGrades,
+                    gCutOffs:    gradeCutOffs,
+                    retCSVName:  desFileName
+                };
+
+                // If there are special grades, show them for the instructor to review
+                if (specialGradeMap.length > 0) {
+                    showSpecialGradesModal(gradesDetails, specialGradeMap);
+                } else {
+                    sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
+                    window.open("histogram.html", "_self");
+                }
             };
 
-            // If there are special grades, show them for the instructor to review
-            if (specialGradeMap.length > 0) {
-                showSpecialGradesModal(gradesDetails, specialGradeMap);
-            } else {
-                sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
-                window.open("histogram.html", "_self");
+            if (missingStudents.length === 0) {
+                proceed();
+                return;
             }
+            showMissingMarksModal(missingStudents, subjectMarksVal, (entered) => {
+                // Entered marks are placed exactly like pasted ones: a non-letter ERP grade
+                // keeps the student in the special list (with the marks), otherwise letter-graded
+                entered.forEach(({ id, name, erpGrade, marks }) => {
+                    if (isSpecialGrade(erpGrade)) specialGradeMap.push([id, erpGrade, name, marks]);
+                    else                          markMap.push([id, marks, name]);
+                });
+                proceed();
+            });
+        }
+
+        /**
+         * Ask for the marks of ERP students missing from the pasted list (W excluded).
+         * Every box must hold a number from 0 to maxMarks; decimals are rounded up like
+         * pasted marks. Continue calls onDone([{id, name, erpGrade, marks}, ...]);
+         * Cancel closes the window so the pasted data can be fixed instead.
+         */
+        function showMissingMarksModal(missing, maxMarks, onDone) {
+            const old = document.getElementById('missingMarksModal');
+            if (old) old.remove();   // rebuilt each time: the list can change
+
+            const rows = missing.map((st, i) => `
+                <tr>
+                    <td>${escapeHtml(st.id)}</td>
+                    <td>${escapeHtml(st.name)}</td>
+                    <td>${escapeHtml(st.erpGrade) || '–'}</td>
+                    <td><input type="number" class="form-control form-control-sm missing-marks"
+                               data-idx="${i}" min="0" max="${maxMarks}" step="any"
+                               aria-label="Marks for ${escapeHtml(st.id)}"></td>
+                </tr>`).join('');
+
+            document.body.insertAdjacentHTML('beforeend', `
+            <div class="modal fade" id="missingMarksModal" tabindex="-1" data-bs-backdrop="static"
+                 aria-labelledby="missingMarksLabel" aria-hidden="true">
+              <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="missingMarksLabel">
+                        ${missing.length} student${missing.length === 1 ? '' : 's'} missing from your marks
+                    </h5>
+                  </div>
+                  <div class="modal-body">
+                    <p>The ERP file is the master list. These students are in the ERP file but not in the
+                       marks you pasted. Enter their marks (0 to ${maxMarks}) to continue, or click Cancel
+                       and fix the pasted marks. Withdrawn (W) students are not asked.</p>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-sm align-middle">
+                        <thead><tr><th>Student ID</th><th>Name</th><th>ERP grade</th><th style="width:9rem">Marks</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                      </table>
+                    </div>
+                    <p id="missingMarksError" class="text-danger fw-bold mb-0"></p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="missingMarksContinue">Continue</button>
+                  </div>
+                </div>
+              </div>
+            </div>`);
+
+            const modalEl = document.getElementById('missingMarksModal');
+            const bsModal = new bootstrap.Modal(modalEl);
+            const inputs  = [...modalEl.querySelectorAll('.missing-marks')];
+
+            document.getElementById('missingMarksContinue').onclick = () => {
+                let bad = 0;
+                const entered = inputs.map(input => {
+                    const v  = parseFloat(input.value);
+                    const ok = input.value.trim() !== '' && !isNaN(v) && v >= 0 && v <= maxMarks;
+                    input.classList.toggle('is-invalid', !ok);
+                    if (!ok) bad++;
+                    return { ...missing[input.dataset.idx], marks: Math.ceil(v) };
+                });
+                if (bad > 0) {
+                    document.getElementById('missingMarksError').textContent =
+                        `Enter marks between 0 and ${maxMarks} for every student (${bad} missing or invalid).`;
+                    return;
+                }
+                // Continue only after this window has fully closed, so the next window
+                // (Special Grades Found) does not open on top of its fading backdrop
+                modalEl.addEventListener('hidden.bs.modal', () => onDone(entered), { once: true });
+                bsModal.hide();
+            };
+            modalEl.addEventListener('shown.bs.modal', () => inputs[0] && inputs[0].focus(), { once: true });
+            bsModal.show();
         }
 
         /**
