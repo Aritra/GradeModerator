@@ -23,6 +23,7 @@
                         <input type="file" id="UploadJsonFile" accept=".json" autocomplete="off" style="width: 79.5%;"/>
                         <input type="submit" class="btn btn-primary" name="submit" style="width: 20%;"/>
                     </form>
+                    <p id="demo" style="padding-top: 15px;"></p>
                 </div>
             </div>
             <div class="col-sm-2"></div>
@@ -32,10 +33,37 @@
     <script>
         const formJSON   = document.getElementById("formJSON");
         const jsonFile   = document.getElementById("UploadJsonFile");
+        const demo       = document.getElementById("demo");
 
         // Clear the chosen file every time the page is shown, including when it is
         // reached with the browser's Back button, so an earlier file is not reused
-        window.addEventListener('pageshow', () => { jsonFile.value = ''; });
+        window.addEventListener('pageshow', () => { jsonFile.value = ''; demo.innerHTML = ''; });
+
+        /**
+         * Key used to match student IDs: year (chars 1-4) + roll number + campus letter
+         * (chars 9-13), ignoring the programme code, case and spaces. Same helper as in
+         * new_grade_updated.html and histogram.html.
+         */
+        function idMatchKey(id) {
+            const clean = String(id).trim().toUpperCase();
+            return clean.length === 13 ? clean.slice(0, 4) + clean.slice(8) : clean;
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        /** IDs (as saved) of students listed more than once across mMap and specialGMap. */
+        function duplicateStudentIds(gradesDetails) {
+            const seen = new Map(), dups = new Set();
+            [...(gradesDetails.mMap || []), ...(gradesDetails.specialGMap || [])].forEach(row => {
+                const key = idMatchKey(row[0]);
+                if (seen.has(key)) dups.add(seen.get(key));
+                else seen.set(key, String(row[0]).trim());
+            });
+            return [...dups];
+        }
 
         /**
          * On form submit: read the JSON file, store it in sessionStorage,
@@ -48,7 +76,22 @@
 
             const reader = new FileReader();
             reader.onload = function (e) {
-                const gradesDetails = JSON.parse(e.target.result);
+                let gradesDetails;
+                try {
+                    gradesDetails = JSON.parse(e.target.result);
+                } catch (err) {
+                    demo.innerHTML = "❌ This file is not a valid grades JSON file.";
+                    return;
+                }
+                // The same student twice would be counted twice in the histogram and MGPV
+                const dups = duplicateStudentIds(gradesDetails);
+                if (dups.length > 0) {
+                    demo.innerHTML = `❌ This file lists ${dups.length} student(s) more than once ` +
+                        `(${dups.slice(0, 3).map(escapeHtml).join(', ')}${dups.length > 3 ? ', …' : ''}), ` +
+                        `so it cannot be opened. Please create the grades again from the marks and ERP files.`;
+                    jsonFile.value = '';
+                    return;
+                }
                 sessionStorage.setItem("gradeObject", JSON.stringify(gradesDetails));
                 window.open("histogram.html", "_self");
             };

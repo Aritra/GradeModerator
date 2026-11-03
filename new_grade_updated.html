@@ -399,11 +399,12 @@
          * With no starting row chosen (chosenStartRow = -1) the colouring is removed.
          */
         function highlightPastePreview() {
-            const badIds = new Set(invalidIdRows());
+            // ID not in BITS format, or the same student on more than one row
+            const badIds = new Set([...invalidIdRows(), ...duplicatePasteGroups().flat().map(it => it.where)]);
             Array.from(pastePreviewBody.rows).forEach((tr, i) => {
                 tr.classList.toggle('paste-header', chosenStartRow >= 0 && i <  chosenStartRow);
                 tr.classList.toggle('paste-data',   chosenStartRow >= 0 && i >= chosenStartRow);
-                tr.classList.toggle('paste-bad',    badIds.has(i));   // ID not in BITS format
+                tr.classList.toggle('paste-bad',    badIds.has(i));
             });
         }
 
@@ -430,6 +431,48 @@
             return `❌ ${bad.length} student ID(s) are not in BITS format (shown in red; ${examples}${bad.length > 3 ? ', …' : ''}). ` +
                    `IDs must look like 2023A7PS0412H: 4-digit year, 4-character programme code, 4-digit roll number and campus letter. ` +
                    `Fix them in your sheet and paste again.`;
+        }
+
+        /**
+         * Groups of entries that belong to the same student, i.e. share an idMatchKey
+         * (year + roll number + campus), so 2023A7PS0412H and 2023B4A70412H count as
+         * duplicates just as they would match each other. items = [{id, where}];
+         * blank IDs are skipped. Returns [[item, item, ...], ...], one group per student.
+         */
+        function duplicateIdGroups(items) {
+            const byKey = new Map();
+            items.forEach(it => {
+                if (String(it.id).trim() === '') return;
+                const key = idMatchKey(it.id);
+                if (!byKey.has(key)) byKey.set(key, []);
+                byKey.get(key).push(it);
+            });
+            return [...byKey.values()].filter(group => group.length > 1);
+        }
+
+        /** Short list of duplicate groups for messages: 2023A7PS0412H (rows 5, 9), ... */
+        function duplicateIdExamples(groups, rowWord, rowOf) {
+            const text = groups.slice(0, 3).map(g =>
+                `${escapeHtml(g[0].id.trim())} (${rowWord} ${g.map(rowOf).join(', ')})`).join('; ');
+            return text + (groups.length > 3 ? '; …' : '');
+        }
+
+        /** Duplicate students among the pasted rows (from the chosen starting row). */
+        function duplicatePasteGroups() {
+            if (chosenStartRow < 0 || !csvSRCtxt) return [];
+            const items = [];
+            for (let i = chosenStartRow; i < csvSRCtxt.length; i++) items.push({ id: csvSRCtxt[i][0], where: i });
+            return duplicateIdGroups(items);
+        }
+
+        /** Message for duplicate pasted students (empty string if there are none). */
+        function duplicatePasteMessage() {
+            const groups = duplicatePasteGroups();
+            if (groups.length === 0) return '';
+            return `❌ ${groups.length} student(s) appear on more than one pasted row (shown in red; ` +
+                   `${duplicateIdExamples(groups, 'rows', it => it.where + 1)}). ` +
+                   `IDs are matched on year, roll number and campus letter, so the programme code does not make them different. ` +
+                   `Keep one row per student in your sheet and paste again.`;
         }
 
         // Attach paste listener to the textarea
@@ -472,6 +515,8 @@
                 document.getElementById("demo").innerHTML += `<br>📌 Starting row set to row ${idx} (0‑based index ${chosenStartRow}). Now upload ERP CSV.`;
                 const idProblem = invalidIdMessage();
                 if (idProblem) document.getElementById("demo").innerHTML += `<br>${idProblem}`;
+                const dupProblem = duplicatePasteMessage();
+                if (dupProblem) document.getElementById("demo").innerHTML += `<br>${dupProblem}`;
             } else {
                 document.getElementById("demo").innerHTML = "⚠️ Please paste marks data first, then choose starting row.";
             }
@@ -534,7 +579,27 @@
 
             const reader = new FileReader();
             reader.onload = function (e) {
-                csvDEStxt = csvToArray(e.target.result);
+                const rows = csvToArray(e.target.result);
+
+                // Reject an ERP file that lists the same student twice: grades are written
+                // back by ID, so a duplicate would get an arbitrary one of the two results
+                const items = [];
+                for (let j = 1; j < rows.length; j++) {
+                    if (typeof rows[j][ERP_ID_COL] !== "undefined") items.push({ id: rows[j][ERP_ID_COL], where: j });
+                }
+                const groups = duplicateIdGroups(items);
+                if (groups.length > 0) {
+                    csvDEStxt = [];
+                    csvDESFile.value = "";
+                    showHistBtn.disabled = true;
+                    document.getElementById("demo").innerHTML +=
+                        `<br>❌ The ERP file ${escapeHtml(desFileName)} lists ${groups.length} student(s) more than once ` +
+                        `(${duplicateIdExamples(groups, 'lines', it => it.where + 1)}). ` +
+                        `Please download a fresh copy from ERP, or remove the extra lines without renaming the file, and upload it again.`;
+                    return;
+                }
+
+                csvDEStxt = rows;
                 enableGoBtn();
                 document.getElementById("demo").innerHTML += `<br>📂 ERP file loaded: ${desFileName} (${csvDEStxt.length} rows). Ready to show histogram.`;
             };
@@ -575,6 +640,13 @@
             const idProblem = invalidIdMessage();
             if (idProblem) {
                 document.getElementById("demo").innerHTML = idProblem;
+                return;
+            }
+
+            // Check that no student is pasted twice
+            const dupProblem = duplicatePasteMessage();
+            if (dupProblem) {
+                document.getElementById("demo").innerHTML = dupProblem;
                 return;
             }
 
