@@ -86,6 +86,17 @@
        best results; Firefox, Edge and Safari also work.</p>
 </section>
 
+<section class="help-section" id="privacy">
+    <h2>Privacy and data security</h2>
+    <p>The Grade Moderator is a static website that runs entirely within your web browser. It has no
+       server-side component: marks, student details and files are never uploaded, transmitted or stored on
+       any server. The application can read only the files that you choose to open yourself, and it has no
+       access to any other information on your computer. Apart from downloading the pages and their standard
+       open-source libraries (Bootstrap and Chart.js), it makes no network connections. Work in progress is
+       kept only within your own browser tab (so that a page refresh does not lose it) and in the JSON and
+       CSV files you choose to download.</p>
+</section>
+
 <section class="help-section" id="quickstart">
     <h2>Quick start</h2>
     <ol>
@@ -128,10 +139,22 @@
             column is also rejected. An empty extra column is ignored.</li>
         <li><b>Decimal marks are rounded up</b> to the next whole number (45.2 becomes 46, 45.0 stays 45),
             because grading works on whole marks. The status line says how many were rounded.</li>
+        <li><b>IDs are converted to capital letters</b> (digits are unchanged) and spaces around them are removed,
+            for example <code>2023a7ps0412h</code> becomes <code>2023A7PS0412H</code>. A header such as
+            “Student ID” is left as it is. The status line says how many IDs were converted.</li>
     </ul>
     <h3>Starting row</h3>
     <p>Pick the row number (as shown in the preview) of the first student. Rows above it are treated
        as headers and shown in dark blue; the student rows are shown in light yellow.</p>
+    <h3>ID format check</h3>
+    <p>Once the starting row is chosen, every student ID is checked against the BITS format: a 4-digit year,
+       a 4-character programme code, a 4-digit roll number and a campus letter (13 characters, such as
+       <code>2023A7PS0412H</code>). Rows with an invalid or empty ID are shown in red with a message, and
+       <b>Show Histogram</b> will not continue until they are fixed in your sheet and pasted again.
+       Completely empty rows are ignored.</p>
+    <h3>Coming back with the Back button</h3>
+    <p>The New Grade and View Grades pages are cleared every time they are opened, including with the
+       browser's Back button, so details from a previous course are never reused by mistake.</p>
 </section>
 
 <section class="help-section" id="erp-file">
@@ -347,6 +370,10 @@
         <dt>A “students missing from your marks” window appeared</dt>
         <dd>Those students are in the ERP list but were not found in your pasted marks (check that their year,
             roll number and campus letter match). Enter their marks, or Cancel and paste the complete list.</dd>
+        <dt>“student ID(s) are not in BITS format”</dt>
+        <dd>The rows shown in red have an ID that is not 13 characters in the form year + programme code + roll
+            number + campus letter (for example a missing digit, or a name in the ID column). Correct them in your
+            sheet, paste again and choose the starting row.</dd>
         <dt>The paste was rejected</dt>
         <dd>Copy only the Student ID and Marks columns. Rows shown in red have extra columns.</dd>
         <dt>“… is missing in your sheet but present in the ERP CSV”</dt>
@@ -367,9 +394,8 @@
 </section>
 
 <section class="help-section" id="contact">
-    <h2>Video tutorial and contact</h2>
-    <p>Watch the <a href="https://youtu.be/-dX6KwiFTj4" target="_blank">YouTube tutorial</a>. For bug reports
-       or suggestions, email
+    <h2>Contact</h2>
+    <p>For bug reports or suggestions, email
        <a href="mailto:a.mukherjee@hyderabad.bits-pilani.ac.in">Aritra Mukherjee, Dept. of CSIS, Hyderabad Campus</a>.</p>
 </section>
 

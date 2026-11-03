@@ -7,10 +7,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <title>BITS Pilani Grade Moderator</title>
     <style>
+        /* Footer sits at the bottom of the window when the page is short, and below the
+           content (never on top of it) when the window is small */
+        body { min-height: 100vh; display: flex; flex-direction: column; }
+        body > .container-fluid { flex: 1 0 auto; }
         .footer {
-            position: fixed;
-            left: 0;
-            bottom: 0;
             width: 100%;
             padding-top: 10px;
             background-color: navy;
@@ -35,6 +36,15 @@
             margin: 0 7.65% 10px 6.45%;
         }
         .home-buttons .btn { flex: 1 1 0; min-width: 9rem; }
+        /* Privacy notice under the buttons: same width as the button row */
+        .home-disclaimer {
+            margin: 1.25rem 7.65% 1.5rem 6.45%;
+            padding: .9rem 1.25rem;
+            border: 1px solid #c9d1ea; border-left: 4px solid #000080; border-radius: .4rem;
+            background: #f5f7fd; color: #333; font-size: .95rem; line-height: 1.5;
+        }
+        .home-disclaimer h2 { font-size: 1.05rem; color: #000080; margin: 0 0 .35rem; }
+        .home-disclaimer p  { margin: 0; }
     </style>
 </head>
 <body>
@@ -65,6 +75,20 @@
                         Help
                     </button>
                 </div>
+
+                <!-- Privacy and data security notice -->
+                <section class="home-disclaimer" aria-labelledby="privacyHeading">
+                    <h2 id="privacyHeading">Privacy and data security</h2>
+                    <p>
+                        The Grade Moderator is a static website that runs entirely within your web browser.
+                        It has no server-side component: marks, student details and files are never uploaded,
+                        transmitted or stored on any server. The application can read only the files that you
+                        choose to open yourself, and it has no access to any other information on your computer.
+                        Apart from downloading this page and its standard open-source libraries, it makes no
+                        network connections, and work in progress is kept only within your own browser tab.
+                        You may therefore use it with confidence for confidential grading data.
+                    </p>
+                </section>
             </div>
             <div class="col-sm-1"></div>
         </div>
@@ -72,9 +96,7 @@
 
     <div class="footer">
     <p style="color:darkgrey;">
-        New to the system? You may watch the
-        <a href="https://youtu.be/-dX6KwiFTj4" target="_blank">YouTube tutorial</a> before proceeding.
-        You may also refer the 
+        New to the system? Please refer to the
         <a href="help.html" target="_blank">Help Documentation</a>.
         <br>
         For any bug report or suggestions please mail to

@@ -64,18 +64,12 @@ Also works on:
 
 ---
 
-## 🎥 Tutorial Video
-
-Need a quick walkthrough?
-
-👉 https://youtu.be/ez0jZY4h_zU
-
----
-
 ## 💡 Tips for First-Time Users
 
 - 💾 Always save a JSON backup
 - 📋 The ERP file is the master list: if a student in it (other than W) is missing from your pasted marks, you are asked for their marks before the histogram opens; extra pasted students are ignored
+- 🔠 Pasted IDs are converted to capital letters and checked against the BITS ID format (e.g. `2023A7PS0412H`) before the histogram opens
+- 🔄 The New Grade and View Grades pages are cleared when you come back to them (including with the browser's Back button)
 - 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored
 - 🧪 Try with a small dataset first
 
