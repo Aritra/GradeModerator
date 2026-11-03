@@ -42,11 +42,15 @@
         /**
          * Key used to match student IDs: year (chars 1-4) + roll number + campus part
          * (chars 9 on; the campus part is one letter, or GH / HP / GHP ... for transfer
-         * students), ignoring the programme code, case and spaces. Same helper as in
+         * students), ignoring the programme code, case and spaces; a PhD ID ("PH" after
+         * the year) is compared whole. Same helper as in
          * new_grade_updated.html and histogram.html.
          */
         function idMatchKey(id) {
             const clean = String(id).trim().toUpperCase();
+            // PhD candidates ("PH" right after the year, e.g. 2026PHXP2000H) can share year,
+            // roll number and campus with a first-degree student, so they match only on the full ID
+            if (clean.slice(4, 6) === 'PH') return clean;
             return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
         }
 

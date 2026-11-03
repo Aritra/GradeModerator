@@ -201,7 +201,8 @@
        <b>Show Histogram</b> will not continue until you keep one row per student and paste again. IDs count as
        the same student when the year, roll number and campus letter agree (see
        <a href="#matching">How students are matched</a>), so <code>2023A7PS0412H</code> and
-       <code>2023B4A70412H</code> are duplicates.</p>
+       <code>2023B4A70412H</code> are duplicates. PhD IDs (<code>PH</code> after the year) count as the same student only
+       when the whole ID is identical, so <code>2026A7PS2000H</code> and <code>2026PHXP2000H</code> are not duplicates.</p>
     <h3>Coming back with the Back button</h3>
     <p>The New Grade and View Grades pages are cleared every time they are opened, including with the
        browser's Back button, so details from a previous course are never reused by mistake.</p>
@@ -238,7 +239,12 @@
             roll number and campus letter(s)</b> only (for <code>2023A7PS0412H</code>: 2023, 0412 and H; for a
             transfer student's <code>2023A7PS0412GH</code>: 2023, 0412 and GH, so it does not match …0412H). The
             programme code in the middle (A7PS, B4A7, …) is ignored, as are upper/lower case and spaces, so
-            a student whose branch is written differently in your sheet and in ERP still matches. The ID
+            a student whose branch is written differently in your sheet and in ERP still matches.
+            <b>Exception, PhD candidates:</b> an ID with <code>PH</code> right after the year (for example
+            <code>2026PHXP2000H</code> or <code>2026PHIP2000H</code>) is matched only on the <b>complete ID</b>, because
+            a PhD candidate can share the year, roll number and campus with a first-degree student
+            (<code>2026A7PS2000H</code>). So <code>2026PHXP2000H</code> matches only <code>2026PHXP2000H</code>, not
+            <code>2026A7PS2000H</code> or <code>2026PHIP2000H</code>. The ID
             shown and exported is always the one from the ERP file.</li>
         <li>If the ERP <b>Grade</b> column already holds a <b>non-letter grade</b> (W, I, NC, GA, RC,
             DP, TGA or RRA), the student is <b>not</b> placed in the histogram; they are listed
@@ -466,7 +472,8 @@
        (<code>GG</code> or <code>GX</code> is rejected). On the sort page a transfer student's campus is shown
        as, for example, “Goa + Hyderabad”.</p>
     <p>Students are <b>matched</b> between your marks and the ERP file on the year, roll number and campus
-       letter(s) only (the campus part must be identical); the programme code (characters 5–8) is ignored for matching. The sort page uses the
+       letter(s) only (the campus part must be identical); the programme code (characters 5–8) is ignored for matching,
+       except for PhD candidates (characters 5–6 are <code>PH</code>, e.g. <code>2026PHXP2000H</code>), whose complete ID must match. The sort page uses the
        campus letter and programme code to group students by campus and branch.</p>
 </section>
 
@@ -499,7 +506,8 @@
             with 0 marks; correct that row in the CSV by hand.</dd>
         <dt>A student I expected is not in the histogram</dt>
         <dd>They have a non-letter grade in the ERP file, or the year, roll number or campus letter of their
-            ID differs between your sheet and ERP (a different programme code alone does not matter).
+            ID differs between your sheet and ERP (a different programme code alone does not matter, except for
+            PhD IDs with <code>PH</code> after the year, which must match exactly).
             Check Search/Edit Grades and the Non Letter Grades table.</dd>
         <dt>I changed a grade to NC by mistake</dt>
         <dd>Changes in Search/Edit Grades cannot be undone on the page. Open the <code>AUTO_BACKUP_…json</code>

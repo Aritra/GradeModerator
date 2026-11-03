@@ -556,10 +556,14 @@
          * (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose branch differs
          * between the marks sheet and ERP still matches; the campus part must agree
          * exactly (H and GH are different students). An ID that is not 13-15 characters
-         * long is compared as a whole. (Same helper in histogram.html and view_grade.html.)
+         * long is compared as a whole, and so is a PhD ID ("PH" after the year).
+         * (Same helper in histogram.html and view_grade.html.)
          */
         function idMatchKey(id) {
             const clean = String(id).trim().toUpperCase();
+            // PhD candidates ("PH" right after the year, e.g. 2026PHXP2000H) can share year,
+            // roll number and campus with a first-degree student, so they match only on the full ID
+            if (clean.slice(4, 6) === 'PH') return clean;
             return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
         }
 

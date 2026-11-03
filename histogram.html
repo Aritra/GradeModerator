@@ -1649,11 +1649,15 @@
      * GH / HP / GHP ...), ignoring case and surrounding spaces. The programme code
      * (chars 5-8, e.g. A7PS / B4A7) is ignored, so a student whose branch differs
      * between the marks sheet and ERP still matches; the campus part must agree
-     * exactly. An ID that is not 13-15 characters long is compared as a whole.
+     * exactly. An ID that is not 13-15 characters long is compared as a whole, and
+     * so is a PhD ID ("PH" after the year).
      * (Same helper in new_grade_updated.html and view_grade.html.)
      */
     function idMatchKey(id) {
         const clean = String(id).trim().toUpperCase();
+        // PhD candidates ("PH" right after the year, e.g. 2026PHXP2000H) can share year,
+        // roll number and campus with a first-degree student, so they match only on the full ID
+        if (clean.slice(4, 6) === 'PH') return clean;
         return clean.length >= 13 && clean.length <= 15 ? clean.slice(0, 4) + clean.slice(8) : clean;
     }
 
