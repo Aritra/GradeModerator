@@ -64,6 +64,7 @@ Subject code is derived from the ERP CSV filename: `parts = name.split("_")`, `c
   retCSVName,
   histRange:   [markLowest, markHighest]                  // optional; written by histogram.html (autosave + Save Grades)
   ncZone:      {rule, medPct, k, pct, show}                   // optional; NC Calculator settings (histogram.html)
+  ncAppliedRule: string                                       // optional; NC rule last applied with the red X, prefills Print PDF
 }
 ```
 
@@ -137,7 +138,7 @@ IDs are matched **everywhere** on year of admission + roll number + campus lette
 
 ### Print PDF flow
 
-1. "Print PDF" calls `showNCDialog()`: Bootstrap modal `#ncDialog` with a 200-char textarea (`maxlength=200`) and live counter (`updateNCCounter()`).
+1. "Print PDF" calls `showNCDialog()`: Bootstrap modal `#ncDialog` with a 200-char textarea (`maxlength=200`) and live counter (`updateNCCounter()`). The textarea is prefilled with `ncAppliedRule` (empty until the red X has been used): set in `confirmNCApply()` *after* the AUTO_BACKUP_ download, e.g. "NC if marks < 83.7, i.e. 30% of the average marks of the top 3 students (279)" (from `ncLine().rule`), saved in the grade object and restored on load.
 2. "Print" calls `confirmAndPrint()`: writes the text into `#ncCutoffPrintText`, hides `#allControlsBelow`, shows `#divNCcutoff` (same grid slot, `height:10%`, with a ✕ button calling `hideNCCutoffDiv()` to restore the controls). Printing starts from the modal's `hidden.bs.modal` event, after removing any leftover `.modal-backdrop`, then `printpage()` (injects `@page { size: landscape; }`).
 3. Inline `@media print` hides `.overlayDiv`, `.modal-backdrop`, `#myModal`, `#ncDialog`; `print.css` hides the keep-grade row and the controls bar (its `#changeGradeDiv` rule is now a no-op). Grade bubbles print (`print-color-adjust: exact`) and stay on their lines (verified via headless Chrome print-to-PDF).
 

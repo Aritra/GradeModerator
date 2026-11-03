@@ -844,6 +844,9 @@
     // NC Calculator: chosen rule, K and percentage for the top-K rule, and whether the
     // NC zone is shaded on the histogram (saved in the grade object as ncZone)
     // (medPct: percentage of the median; pct: percentage of the top-K average)
+    // The NC rule last applied with the red X button, as one sentence (saved as
+    // ncAppliedRule); prefills the NC criterion box of Print PDF
+    let ncAppliedRule      = '';
     let ncSettings         = { rule: 'median', medPct: 40, k: 3, pct: 30, show: false };
 
     let markLowest         = 10000;
@@ -1513,7 +1516,8 @@
             gCutOffs:    gCutOffs,
             retCSVName:  desFileName,
             histRange:   [markLowest, markHighest],
-            ncZone:      ncSettings
+            ncZone:      ncSettings,
+            ncAppliedRule: ncAppliedRule
         };
     }
 
@@ -1581,11 +1585,11 @@
      * Called by the "Print PDF" button.
      */
     function showNCDialog() {
-        // Reset textarea and counter each time the dialog opens
+        // Start from the NC rule last applied with the red X button (empty if none);
+        // it can be edited before printing
         const input   = document.getElementById('ncCutoffInput');
-        const counter = document.getElementById('ncCounter');
-        input.value   = '';
-        counter.textContent = '200 characters remaining';
+        input.value   = ncAppliedRule;
+        updateNCCounter();
         new bootstrap.Modal(document.getElementById('ncDialog')).show();
     }
 
@@ -2020,14 +2024,16 @@
             if (!(pct > 0 && pct <= 100)) return { error: 'The percentage must be more than 0 and at most 100.' };
             const avg = marks.slice(-k).reduce((a, b) => a + b, 0) / k;
             return { value: pct / 100 * avg,
-                     explain: `Average of the top ${k} = ${fmtMarks(avg)}; ${fmtMarks(pct)}% of it` };
+                     explain: `Average of the top ${k} = ${fmtMarks(avg)}; ${fmtMarks(pct)}% of it`,
+                     rule:    `${fmtMarks(pct)}% of the average marks of the top ${k} students (${fmtMarks(avg)})` };
         }
         const medPct = ncSettings.medPct;
         if (!(medPct > 0 && medPct <= 100)) return { error: 'The percentage must be more than 0 and at most 100.' };
         const mid = Math.floor(n / 2);
         const med = n % 2 ? marks[mid] : (marks[mid - 1] + marks[mid]) / 2;
         return { value: medPct / 100 * med,
-                 explain: `Median of ${n} students = ${fmtMarks(med)}; ${fmtMarks(medPct)}% of it` };
+                 explain: `Median of ${n} students = ${fmtMarks(med)}; ${fmtMarks(medPct)}% of it`,
+                 rule:    `${fmtMarks(medPct)}% of the median marks (${fmtMarks(med)})` };
     }
 
     /** Fill the result box: the NC line and the students below it. */
@@ -2154,6 +2160,9 @@
         bootstrap.Modal.getOrCreateInstance(ncApplyModal).hide();
         if (changes.size === 0) return;
         downloadGradeJSON('AUTO_BACKUP_');
+        // Remembered after the backup (which holds the state before this change);
+        // Print PDF prefills its NC criterion box with it
+        ncAppliedRule = `NC if marks < ${fmtMarks(line.value)}, i.e. ${line.rule}`.slice(0, 200);
         applyNonLetterGrades(changes);
         resetHistogramMinimum();
     }
@@ -2291,6 +2300,7 @@
         gCutOffs     = gradesDetails.gCutOffs;
         desFileName  = gradesDetails.retCSVName;
         if (gradesDetails.ncZone) ncSettings = Object.assign(ncSettings, gradesDetails.ncZone);
+        if (typeof gradesDetails.ncAppliedRule === 'string') ncAppliedRule = gradesDetails.ncAppliedRule;
 
         document.title          = subjectCode + "_histogram";
         TFSubjectCode.textContent     = subjectCode;
