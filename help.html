@@ -3,187 +3,450 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BITS Grade Moderator – Help Guide</title>
-
+<title>BITS Grade Moderator – Help</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
 <style>
-body {
-    background-color: #f8f9fa;
-}
-.section {
-    background: white;
-    padding: 20px;
-    margin-bottom: 20px;
-    border-radius: 10px;
-}
-h2 {
-    color: #0a1f66;
-}
-.step {
-    margin-bottom: 10px;
-}
+    body { background-color: #f4f6fa; }
+    .help-header { background: #000080; color: #fff; padding: 1.5rem 0 1rem; }
+    .help-header h1 { font-size: 1.9rem; margin: 0; }
+    .help-header p  { margin: .25rem 0 0; color: #d6dcff; }
+
+    /* Search bar stays visible while scrolling */
+    .search-bar {
+        position: sticky; top: 0; z-index: 10;
+        background: #f4f6fa; padding: .75rem 0; border-bottom: 1px solid #d9deea;
+    }
+    #searchStatus { font-size: .9rem; color: #555; min-height: 1.3em; }
+
+    #toc { position: sticky; top: 6.5rem; font-size: .92rem; }
+    #toc a { text-decoration: none; color: #000080; }
+    #toc a:hover { text-decoration: underline; }
+    #toc li { margin-bottom: .25rem; }
+
+    .help-section {
+        background: #fff; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+        border-radius: .5rem; border: 1px solid #e3e7f0;
+        scroll-margin-top: 6.5rem;   /* keep headings clear of the sticky search bar */
+    }
+    .help-section h2 { color: #000080; font-size: 1.35rem; margin-bottom: .75rem; }
+    .help-section h3 { font-size: 1.05rem; margin-top: 1rem; }
+    .help-section table { width: auto; }
+    .note    { border-left: 4px solid #cc7000; background: #fff6ea; padding: .5rem .75rem; margin: .75rem 0; }
+    .warning { border-left: 4px solid #c00000; background: #fdeaea; padding: .5rem .75rem; margin: .75rem 0; }
+    code { color: #6f1d6f; }
+    mark { background: #ffe066; padding: 0; }
+    #noResults { display: none; }
 </style>
 </head>
-
 <body>
 
-<div class="container mt-4 mb-5">
+<header class="help-header">
+    <div class="container">
+        <h1>BITS Pilani Grade Moderator – Help</h1>
+        <p>How the system works, step by step, and what each part of the screen does.</p>
+    </div>
+</header>
 
-<h1 class="text-center mb-4">📘 Grade Moderator – User Guide</h1>
-
-<div class="section">
-<h2>🔰 What is this system?</h2>
-<p>
-This software helps instructors:
-<ul>
-<li>Upload student marks</li>
-<li>Automatically align them with ERP data</li>
-<li>Visualize grade distributions</li>
-<li>Assign and adjust grades interactively</li>
-<li>Export final results for submission</li>
-</ul>
-</p>
+<div class="search-bar">
+    <div class="container">
+        <input type="search" id="helpSearch" class="form-control form-control-lg"
+               placeholder="Search help (e.g. MGPV, cutoff, NC, ERP file, refresh)…"
+               aria-label="Search help" autocomplete="off">
+        <div id="searchStatus" class="mt-1"></div>
+    </div>
 </div>
 
-<div class="section">
-<h2>🧭 Overall Workflow (Simple)</h2>
-<ol>
-<li>Go to <b>New Grades</b></li>
-<li>Upload or paste marks</li>
-<li>Upload ERP file</li>
-<li>View histogram and assign grades</li>
-<li>Export final results</li>
-</ol>
+<div class="container my-4">
+<div class="row">
+
+<nav class="col-lg-3 d-none d-lg-block">
+    <ul id="toc" class="list-unstyled"></ul>
+</nav>
+
+<main class="col-lg-9" id="helpContent">
+
+<p id="noResults" class="alert alert-warning">No help sections match your search.</p>
+
+<section class="help-section" id="overview">
+    <h2>What the Grade Moderator does</h2>
+    <p>The Grade Moderator helps an instructor turn final marks into letter grades and fill them
+       into the student list downloaded from ERP. It runs entirely in your web browser: nothing is
+       uploaded to a server, and your files never leave your computer.</p>
+    <ol>
+        <li>You give it the students' <b>marks</b> (pasted from Excel or Google Sheets) and the
+            <b>ERP student list</b> (a CSV file).</li>
+        <li>It draws a <b>histogram</b> of the marks: how many students got each mark.</li>
+        <li>You place the <b>grade cutoffs</b> (A, A-, B, … E) by dragging them, usually into the
+            gaps or valleys of the distribution. Grade counts and the MGPV update as you drag.</li>
+        <li>You export the ERP CSV with marks and grades filled in, ready to upload back to ERP,
+            and save your work as a JSON file to continue later.</li>
+    </ol>
+    <p class="note">The page needs an internet connection the first time it opens, to load its
+       styling and charting libraries (Bootstrap and Chart.js). <b>Google Chrome</b> gives the
+       best results; Firefox, Edge and Safari also work.</p>
+</section>
+
+<section class="help-section" id="quickstart">
+    <h2>Quick start</h2>
+    <ol>
+        <li>On the home page click <b>New Grade</b>.</li>
+        <li>Enter the <b>subject name</b> and the <b>maximum marks</b> of the course.</li>
+        <li>Copy two columns from your spreadsheet, <b>Student ID</b> and <b>Marks</b>, and paste
+            them into the paste box.</li>
+        <li>Choose the <b>starting row</b>: the first row that contains a student (2 if you copied one
+            header row, 1 if you copied no header).</li>
+        <li>Choose and submit the <b>ERP CSV file</b> exactly as downloaded from ERP (do not rename it).</li>
+        <li>Click <b>Show Histogram</b>. If students in the ERP file are missing from your marks, enter their
+            marks when asked. If some students have non-letter grades, a list of them is shown next; click OK.</li>
+        <li>Drag the grade bubbles above the chart to set the cutoffs.</li>
+        <li>Click <b>Save Grades</b> to keep a JSON backup, then <b>Save ERP CSV</b> to get the file for ERP.</li>
+    </ol>
+</section>
+
+<section class="help-section" id="home">
+    <h2>Home page</h2>
+    <ul>
+        <li><b>New Grade</b>: start grading a course from marks and an ERP file.</li>
+        <li><b>View Grades</b>: open a JSON file saved earlier with <b>Save Grades</b> and continue
+            from exactly where you left off (cutoffs, non-letter grades, title).</li>
+        <li><b>Help</b>: this page.</li>
+    </ul>
+</section>
+
+<section class="help-section" id="marks-input">
+    <h2>Entering marks (paste from Excel or Google Sheets)</h2>
+    <p>Select the <b>Student ID</b> and <b>Marks</b> columns in your spreadsheet, copy them, click in the
+       paste box and press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>Cmd</kbd>+<kbd>V</kbd> on a Mac). The first
+       column must be the ID and the second the marks.</p>
+    <h3>What happens to pasted data</h3>
+    <ul>
+        <li><b>Preview table</b>: the pasted rows are shown as a table, each with its row number.</li>
+        <li><b>Empty rows</b> at the start and end are removed automatically (copying whole columns
+            often brings hundreds of blank rows).</li>
+        <li><b>Two-column check</b>: if any row has more than two filled columns, those rows are shown
+            in red and the paste is rejected; paste only the ID and Marks columns. Pasting a single
+            column is also rejected. An empty extra column is ignored.</li>
+        <li><b>Decimal marks are rounded up</b> to the next whole number (45.2 becomes 46, 45.0 stays 45),
+            because grading works on whole marks. The status line says how many were rounded.</li>
+    </ul>
+    <h3>Starting row</h3>
+    <p>Pick the row number (as shown in the preview) of the first student. Rows above it are treated
+       as headers and shown in dark blue; the student rows are shown in light yellow.</p>
+</section>
+
+<section class="help-section" id="erp-file">
+    <h2>The ERP CSV file</h2>
+    <p>Download the student list for your course from ERP as a CSV file and choose it in the
+       second upload box. Only <code>.csv</code> files are accepted.</p>
+    <p class="warning"><b>Do not rename the ERP file.</b> The course code is read from the file name.
+       For example, <code>H0827_CS_F213_1159_MIDSEM.csv</code> gives the course code <b>CS F213</b>
+       (the 2nd and 3rd parts of the name, separated by underscores).</p>
+    <h3>Columns used</h3>
+    <table class="table table-sm table-bordered">
+        <tr><th>Column</th><th>ERP heading</th><th>Used for</th></tr>
+        <tr><td>4th</td><td>Campus ID</td><td>Student ID, matched against your marks</td></tr>
+        <tr><td>5th</td><td>Name</td><td>Student name shown in lists</td></tr>
+        <tr><td>7th</td><td>Total marks</td><td>Filled in on export</td></tr>
+        <tr><td>8th</td><td>Grade</td><td>Read on load (non-letter grades such as W); filled in on export</td></tr>
+    </table>
+    <p>Other columns are kept as they are and written back unchanged.</p>
+</section>
+
+<section class="help-section" id="matching">
+    <h2>How students are matched</h2>
+    <p>The ERP list decides who is in the course. For every student in the ERP file:</p>
+    <ul>
+        <li>The student's ID is looked up in your pasted marks. IDs are matched on the <b>year of admission,
+            roll number and campus letter</b> only (for <code>2023A7PS0412H</code>: 2023, 0412 and H). The
+            programme code in the middle (A7PS, B4A7, …) is ignored, as are upper/lower case and spaces, so
+            a student whose branch is written differently in your sheet and in ERP still matches. The ID
+            shown and exported is always the one from the ERP file.</li>
+        <li>If the ERP <b>Grade</b> column already holds a <b>non-letter grade</b> (W, I, NC, GA, RC,
+            DP, TGA or RRA), the student is <b>not</b> placed in the histogram; they are listed
+            separately with that grade.</li>
+        <li>If the student is <b>missing from your marks</b>:
+            <ul>
+                <li>a withdrawn (<b>W</b>) student is listed separately with marks 0, as usual;</li>
+                <li>for anyone else, a <b>Students missing from your marks</b> window opens when you click
+                    Show Histogram, listing their ID, name and ERP grade with a box for their marks. Enter a
+                    mark (0 to the maximum; decimals are rounded up) for every student and click
+                    <b>Continue</b>, or click <b>Cancel</b> and fix the pasted marks. The entered marks are then
+                    used exactly as if they had been pasted.</li>
+            </ul></li>
+        <li>Everyone else is <b>letter-graded</b> and appears in the histogram.</li>
+    </ul>
+    <p>If any students are listed separately, a <b>Special Grades Found</b> window shows them before the
+       histogram opens. The <b>ERP file is the master list</b>: students who are in your marks but <b>not</b> in
+       the ERP file are simply ignored.</p>
+</section>
+
+<section class="help-section" id="histogram">
+    <h2>The histogram page</h2>
+    <h3>Top panel</h3>
+    <ul>
+        <li><b>Course code and name</b>, with a pencil button to edit them (see <i>Editing the course title</i>).</li>
+        <li><b>Total Students</b>: everyone in the ERP list. <b>Students Graded</b>: students currently
+            receiving a letter grade. <b>Maximum Marks</b>, <b>Average Marks</b> (over letter-graded students)
+            and the <b>MGPV</b>.</li>
+        <li><b>Non Letter Grades</b> table: how many students have W, I, NC, GA, RC, DP, TGA and RRA.</li>
+        <li><b>Letter Grades</b> table: the cutoff (minimum marks) and number of students for each grade.</li>
+    </ul>
+    <h3>The chart</h3>
+    <ul>
+        <li>One bar per whole mark; the bar height is the number of letter-graded students with that mark.</li>
+        <li>The x-axis runs from the lowest to the highest letter-graded mark, widened by 5 marks on each
+            side (but never below 0 or above the maximum marks).</li>
+        <li><b>Click a bar</b> to see the students with that mark and the grade they currently get.</li>
+    </ul>
+    <p>The page scales with your screen: text, buttons and the chart grow or shrink with the window.</p>
+</section>
+
+<section class="help-section" id="cutoffs">
+    <h2>Grade cutoffs and the draggable bubbles</h2>
+    <p>Each letter grade has a <b>cutoff</b>: the minimum marks needed for that grade. Each cutoff is
+       drawn as a vertical line with a round <b>bubble</b> on top showing the grade's name.</p>
+    <h3>How a grade is decided</h3>
+    <p>A student gets the <b>highest</b> grade whose cutoff is at or below their marks. For example, with
+       B at 120 and B- at 105, a student with 119 marks gets B-. A student below the <b>E</b> cutoff gets
+       <b>no letter grade</b>; such students are normally given NC (see <i>Non-letter grades</i>).</p>
+    <h3>Moving a cutoff</h3>
+    <ul>
+        <li><b>Drag a bubble</b> left or right. It snaps to whole marks.</li>
+        <li>A cutoff cannot pass its neighbours: it always stays at least one mark above the grade below
+            and one mark below the grade above.</li>
+        <li>The grade tables, Students Graded, MGPV and chart update while you drag.</li>
+        <li>Neighbouring bubbles alternate between a short and a long stick so they do not overlap when
+            cutoffs are close together.</li>
+    </ul>
+    <p>When a new course opens, the 8 cutoffs are spaced evenly across the x-axis as a starting point.
+       Grades are usually set by moving each cutoff into a <b>gap or valley</b> in the distribution, so
+       students on either side of a cutoff are clearly separated.</p>
+    <p class="note">Bubbles work with a mouse, a touchscreen or a pen.</p>
+</section>
+
+<section class="help-section" id="mgpv">
+    <h2>MGPV (Mean Grade Point Value)</h2>
+    <p>Each letter grade carries a weight, its <b>grade points</b>:</p>
+    <table class="table table-sm table-bordered text-center">
+        <tr><th>Grade</th><td>A</td><td>A-</td><td>B</td><td>B-</td><td>C</td><td>C-</td><td>D</td><td>E</td></tr>
+        <tr><th>Grade points</th><td>10</td><td>9</td><td>8</td><td>7</td><td>6</td><td>5</td><td>4</td><td>2</td></tr>
+    </table>
+    <p><b>MGPV = Σ (grade points × number of students with that grade) ÷ number of letter-graded students.</b>
+       Non-letter grades (W, NC, …) do not count.</p>
+    <p>Example: 2 A, 5 B and 3 C → (2×10 + 5×8 + 3×6) ÷ 10 = 78 ÷ 10 = <b>7.80</b>. The MGPV shown is
+       cut (not rounded) to two decimals.</p>
+    <p><b>Hover</b> over the Letter Grades table to see each grade's weight and how much it adds to the
+       MGPV; hover over the left-hand column to see the full calculation with the current numbers.</p>
+</section>
+
+<section class="help-section" id="nonletter">
+    <h2>Non-letter grades (W, I, NC, GA, RC, DP, TGA, RRA)</h2>
+    <ul>
+        <li><b>W</b> (withdrawn) always comes from the ERP file; it cannot be given in this tool.</li>
+        <li>Other non-letter grades can come from the ERP file, or you can give them to letter-graded
+            students in <b>Search/Edit Grades</b>.</li>
+        <li>Hover over the <b>Non Letter Grades</b> table to see the ID and name of every student with a
+            given grade (the first 25 are listed, then “… and N more”).</li>
+    </ul>
+    <p class="note">A common guideline: students scoring below <b>40% of the class median</b> are given
+       <b>NC</b>. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
+</section>
+
+<section class="help-section" id="search-edit">
+    <h2>Search/Edit Grades</h2>
+    <p>Lists every student with ID, name, marks and grade. Type in the search box to filter by name or ID.</p>
+    <h3>Changing a letter grade to a non-letter grade</h3>
+    <ol>
+        <li>Click a letter-graded student. Their details appear below the table with a dropdown.</li>
+        <li>The dropdown starts on the current letter grade; choose I, NC, GA, RC, DP, TGA or RRA. The change
+            is <b>pending</b> and shown in red (for example <code>B- → NC</code>). Choosing the current grade
+            again cancels it.</li>
+        <li>Repeat for as many students as needed.</li>
+        <li>Click <b>I am done!</b> and confirm. The changes are applied together.</li>
+    </ol>
+    <p>The students are removed from the histogram and all tables, counts, the MGPV and the average are
+       refreshed. <b>Their marks are kept</b> (they are written to the ERP file and the saved JSON).
+       <b>Cutoffs and the x-axis do not move.</b></p>
+    <p class="note"><b>Automatic backup:</b> when you confirm, the grades as they were <i>before</i> the
+       changes are first downloaded as a JSON file named <code>AUTO_BACKUP_</code> followed by the usual
+       Save Grades file name (for example <code>AUTO_BACKUP_CS F213_JSON_saved_3-11-2026-14-5-2.json</code>).
+       To go back, open that file with <b>View Grades</b> on the home page.</p>
+    <p class="warning"><b>These changes cannot be undone</b> on the page itself. To undo them, open the
+       automatic backup (or another JSON saved before the change) with View Grades, or start again from your files. Moving a student back to a letter grade after the cutoffs have
+       changed would silently drop them into whatever band the new cutoffs give, changing grade counts and
+       the MGPV you had already moderated, so undo is deliberately not offered.</p>
+</section>
+
+<section class="help-section" id="analytics">
+    <h2>Grade Analytics</h2>
+    <p>Shows the number of students in each active letter grade as a bar chart, or as a pie chart with
+       <b>Show Pie Chart</b>. The heading also says which grade band the class average falls in.</p>
+</section>
+
+<section class="help-section" id="title">
+    <h2>Editing the course title</h2>
+    <p>Click the <b>pencil</b> next to the course title to edit the <b>course code</b> and <b>subject name</b>.
+       Click the <b>tick</b> or press <kbd>Enter</kbd> to keep the change, or <kbd>Esc</kbd> to cancel.
+       An empty box keeps its old value. The new title is used for the browser tab, the saved JSON and
+       its file name. The ERP CSV keeps its original ERP file name.</p>
+</section>
+
+<section class="help-section" id="saving">
+    <h2>Saving and exporting</h2>
+    <h3>Save Grades (JSON backup)</h3>
+    <p>Downloads a JSON file with everything needed to continue: marks, ERP list, cutoffs, non-letter grades
+       and title. Open it later with <b>View Grades</b> on the home page. Save one before making changes you
+       might want to go back on.</p>
+    <h3>Save ERP CSV</h3>
+    <ul>
+        <li><b>Export Directly</b>: fills each student's marks and grade into the ERP file and downloads it
+            with its original name (a preview also opens in a new tab). If an ERP student cannot be found in
+            either list, you are warned and they are marked W with 0 marks; fix that row by hand.</li>
+        <li><b>Sort by Branch/Campus</b>: opens a page where the students can be ordered by campus, by branch,
+            or by both, before downloading. Campus and branch are read from the student ID and shown for
+            reference only; the downloaded file has just the ERP columns.</li>
+    </ul>
+    <h3>Print PDF</h3>
+    <p>Asks for the <b>NC cutoff and criterion</b> (up to 200 characters), which is printed below the chart,
+       then opens the print dialog in landscape. Choose “Save as PDF” to get a PDF. Click the ✕ next to the
+       criterion text afterwards to bring the buttons back.</p>
+</section>
+
+<section class="help-section" id="refresh">
+    <h2>Refreshing the page and keeping your work</h2>
+    <p>While you work, the histogram page keeps a copy of its current state in the browser tab. Refreshing
+       the page brings back your cutoffs, non-letter grades and title.</p>
+    <p class="warning">This copy lives only in that tab. Closing the tab, or opening the page in another tab,
+       loses it. Use <b>Save Grades</b> to keep your work between sessions.</p>
+</section>
+
+<section class="help-section" id="student-id">
+    <h2>Student ID format</h2>
+    <p>BITS student IDs have 13 characters, for example <code>2023A7PS0412H</code>:</p>
+    <table class="table table-sm table-bordered">
+        <tr><th>Characters</th><th>Meaning</th><th>Example</th></tr>
+        <tr><td>1–4</td><td>Year of admission</td><td>2023</td></tr>
+        <tr><td>5–8</td><td>Programme: <code>A7PS</code> = single degree (A7), <code>B4A7</code> = dual degree (B4 and A7)</td><td>A7PS</td></tr>
+        <tr><td>9–12</td><td>Roll number</td><td>0412</td></tr>
+        <tr><td>13</td><td>Campus: H = Hyderabad, P = Pilani, G = Goa</td><td>H</td></tr>
+    </table>
+    <p>Students are <b>matched</b> between your marks and the ERP file on the year, roll number and campus
+       letter only; the programme code (characters 5–8) is ignored for matching. The sort page uses the
+       campus letter and programme code to group students by campus and branch.</p>
+</section>
+
+<section class="help-section" id="troubleshooting">
+    <h2>Troubleshooting</h2>
+    <dl>
+        <dt>The course code is wrong (for example “undefined undefined”)</dt>
+        <dd>The ERP file was renamed. Download it again from ERP, or fix the code with the pencil button.</dd>
+        <dt>A “students missing from your marks” window appeared</dt>
+        <dd>Those students are in the ERP list but were not found in your pasted marks (check that their year,
+            roll number and campus letter match). Enter their marks, or Cancel and paste the complete list.</dd>
+        <dt>The paste was rejected</dt>
+        <dd>Copy only the Student ID and Marks columns. Rows shown in red have extra columns.</dd>
+        <dt>“… is missing in your sheet but present in the ERP CSV”</dt>
+        <dd>A student in the ERP list was not found in your marks or non-letter lists. They are exported as W
+            with 0 marks; correct that row in the CSV by hand.</dd>
+        <dt>A student I expected is not in the histogram</dt>
+        <dd>They have a non-letter grade in the ERP file, or the year, roll number or campus letter of their
+            ID differs between your sheet and ERP (a different programme code alone does not matter).
+            Check Search/Edit Grades and the Non Letter Grades table.</dd>
+        <dt>I changed a grade to NC by mistake</dt>
+        <dd>Changes in Search/Edit Grades cannot be undone on the page. Open the <code>AUTO_BACKUP_…json</code>
+            file that was downloaded when you confirmed the change (or any JSON saved before it) with View Grades.</dd>
+        <dt>The page has no styling or the chart does not appear</dt>
+        <dd>Check your internet connection; the page loads Bootstrap and Chart.js from the internet.</dd>
+    </dl>
+</section>
+
+<section class="help-section" id="contact">
+    <h2>Video tutorial and contact</h2>
+    <p>Watch the <a href="https://youtu.be/-dX6KwiFTj4" target="_blank">YouTube tutorial</a>. For bug reports
+       or suggestions, email
+       <a href="mailto:a.mukherjee@hyderabad.bits-pilani.ac.in">Aritra Mukherjee, Dept. of CSIS, Hyderabad Campus</a>.</p>
+</section>
+
+</main>
+</div>
 </div>
 
-<div class="section">
-<h2>🏠 Home Page</h2>
-<p>
-This is the starting page with three options:
-</p>
-<ul>
-<li><b>New Grades</b> → Standard workflow</li>
-<li><b>New Grades (Cleaner)</b> → Recommended (easier)</li>
-<li><b>View Grades</b> → Load previously saved work</li>
-</ul>
-</div>
+<script>
+    // ── Searchable help ──────────────────────────────────────────────────────────
+    // Every section is shown when the search box is empty. Otherwise only sections
+    // containing all the typed words are shown (with their table-of-contents entry),
+    // and the words are highlighted. Each search starts from the section's original
+    // HTML, so earlier highlights never pile up.
+    const sections   = [...document.querySelectorAll('.help-section')];
+    const searchBox  = document.getElementById('helpSearch');
+    const status     = document.getElementById('searchStatus');
+    const noResults  = document.getElementById('noResults');
+    const toc        = document.getElementById('toc');
 
-<div class="section">
-<h2>🆕 Creating Grades (Recommended Method)</h2>
+    // Build the table of contents from the section headings
+    sections.forEach(sec => {
+        sec.dataset.html = sec.innerHTML;
+        const li = document.createElement('li');
+        li.dataset.for = sec.id;
+        li.innerHTML = `<a href="#${sec.id}"></a>`;
+        li.firstChild.textContent = sec.querySelector('h2').textContent;
+        toc.appendChild(li);
+    });
 
-<h4>Step 1: Enter Details</h4>
-<ul>
-<li>Subject Name</li>
-<li>Maximum Marks</li>
-</ul>
+    const escapeRegExp = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-<h4>Step 2: Paste Marks</h4>
-<ul>
-<li>Copy from Excel/Google Sheets</li>
-<li>Paste directly</li>
-<li><b>Format:</b> Column 1 = ID, Column 2 = Marks</li>
-</ul>
+    /** Wrap every occurrence of the words in <mark>, touching text nodes only. */
+    function highlight(root, words) {
+        const re = new RegExp(words.map(escapeRegExp).join('|'), 'gi');
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(node => {
+            const text = node.nodeValue;
+            re.lastIndex = 0;
+            if (!re.test(text)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0;
+            text.replace(re, (match, offset) => {
+                frag.append(text.slice(last, offset));
+                const mark = document.createElement('mark');
+                mark.textContent = match;
+                frag.append(mark);
+                last = offset + match.length;
+            });
+            frag.append(text.slice(last));
+            node.replaceWith(frag);
+        });
+    }
 
-<h4>Step 3: Select Starting Row</h4>
-<p>Usually 1 or 2 depending on header rows.</p>
+    function runSearch() {
+        const words = searchBox.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        let shown = 0;
+        sections.forEach(sec => {
+            sec.innerHTML = sec.dataset.html;
+            const text = sec.textContent.toLowerCase();
+            const hit  = words.every(w => text.includes(w));
+            sec.hidden = !hit;
+            toc.querySelector(`li[data-for="${sec.id}"]`).hidden = !hit;
+            if (hit) {
+                shown++;
+                if (words.length) highlight(sec, words);
+            }
+        });
+        noResults.style.display = shown === 0 ? 'block' : 'none';
+        status.textContent = words.length
+            ? `${shown} of ${sections.length} sections match “${searchBox.value.trim()}”.`
+            : '';
+    }
 
-<h4>Step 4: Upload ERP CSV</h4>
-<p>This file is used to match students automatically.</p>
-
-<h4>Step 5: Click "Show Histogram"</h4>
-</div>
-
-<div class="section">
-<h2>📊 Histogram & Grading Page</h2>
-
-<p>This is the most important screen.</p>
-
-<h4>What you see:</h4>
-<ul>
-<li>Marks distribution graph</li>
-<li>Grade cutoffs</li>
-<li>Student counts</li>
-<li>Average marks & MGPV</li>
-</ul>
-
-<h4>What you can do:</h4>
-<ul>
-<li>Adjust grade boundaries using slider</li>
-<li>Edit grades manually</li>
-<li>Search individual students</li>
-<li>View analytics (pie/bar charts)</li>
-</ul>
-
-<h4>Special Features:</h4>
-<ul>
-<li><b>Search Grades</b> → find specific students</li>
-<li><b>Grade Analytics</b> → visualize distribution</li>
-<li><b>Edit Mode</b> → manually change grades</li>
-</ul>
-</div>
-
-<div class="section">
-<h2>💾 Saving & Exporting</h2>
-
-<ul>
-<li><b>Save ERP CSV</b> → final file for upload</li>
-<li><b>Save Grades</b> → saves work as JSON</li>
-<li><b>Print PDF</b> → report for records</li>
-</ul>
-
-</div>
-
-<div class="section">
-<h2>📂 Viewing Existing Grades</h2>
-
-<p>
-If you saved your work earlier:
-</p>
-<ul>
-<li>Upload the JSON file</li>
-<li>The system restores everything</li>
-</ul>
-
-</div>
-
-<div class="section">
-<h2>📑 Sorting & Export Page</h2>
-
-<p>You can organize results by:</p>
-<ul>
-<li>Campus</li>
-<li>Branch</li>
-<li>Both</li>
-</ul>
-
-<p>Then export clean tables for reporting.</p>
-</div>
-
-<div class="section">
-<h2>⚠️ Important Notes</h2>
-<ul>
-<li>Ensure Student IDs are correct</li>
-<li>Marks must be numeric</li>
-<li>ERP file format should not be modified</li>
-<li>Special grades (W, I, etc.) are handled automatically</li>
-</ul>
-</div>
-
-<div class="section">
-<h2>💡 Tips for First-Time Users</h2>
-<ul>
-<li>Use the <b>Cleaner version</b> (paste-based)</li>
-<li>Start with a small dataset to test</li>
-<li>Always save JSON backup</li>
-</ul>
-</div>
-
-<div class="text-center mt-4">
-<p style="color: gray;">BITS Pilani Grade Moderator System</p>
-</div>
-
-</div>
-
+    searchBox.addEventListener('input', runSearch);
+    searchBox.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Escape') { searchBox.value = ''; runSearch(); }
+        if (evt.key === 'Enter') {   // jump to the first matching section
+            const first = sections.find(sec => !sec.hidden);
+            if (first) first.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+</script>
 </body>
 </html>

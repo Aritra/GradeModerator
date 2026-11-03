@@ -9,7 +9,7 @@ A simple, browser-based tool to help instructors **upload marks, visualize distr
 
 ### 🆕 New (Enhanced Workflow)
 - ✨ **Paste directly from Excel / Google Sheets** (no CSV needed!)
-- 🧹 Cleaner and faster grading interface (`New Grade - Simpler`)
+- 🧹 Cleaner and faster grading interface (`New Grade`)
 - ⚡ Automatic cleanup of empty rows and formatting
 - ✨ NC cutoff criteria asked before printing the pdf
 
@@ -44,14 +44,10 @@ A simple, browser-based tool to help instructors **upload marks, visualize distr
 
 ### 3️⃣ Choose a Workflow
 
-#### ✅ Recommended: *New Grade (Simpler)*
+#### ✅ *New Grade*
 - Paste marks directly from Excel
 - Upload ERP CSV
 - Generate histogram and assign grades
-
-#### 🧾 Alternative: *New Grade (CSV-based)*
-- Upload marks CSV manually
-- Select columns and proceed
 
 #### 📂 View Grades
 - Load a previously saved JSON file
@@ -78,8 +74,9 @@ Need a quick walkthrough?
 
 ## 💡 Tips for First-Time Users
 
-- ⭐ Use the **Simpler version** (paste-based workflow)
 - 💾 Always save a JSON backup
+- 📋 The ERP file is the master list: if a student in it (other than W) is missing from your pasted marks, you are asked for their marks before the histogram opens; extra pasted students are ignored
+- 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored
 - 🧪 Try with a small dataset first
 
 ---
