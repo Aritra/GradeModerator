@@ -11,7 +11,7 @@ A simple, browser-based tool to help instructors **upload marks, visualize distr
 - ✨ **Paste directly from Excel / Google Sheets** (no CSV needed!)
 - 🧹 Cleaner and faster grading interface (`New Grade`)
 - ⚡ Automatic cleanup of empty rows and formatting
-- ✨ NC cutoff criteria asked before printing the pdf
+- ✨ NC cutoff criteria asked before saving the PDF
 
 ### 📊 Smart Grading & Analytics
 - Interactive **histogram-based grading**
@@ -80,10 +80,10 @@ Also works on:
 - 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored, except for PhD IDs with `PH` after the year (e.g. `2026PHXP2000H`), which must match in full because a PhD candidate can share year, roll number and campus with a first-degree student
 - 📚 **Several ERP files for one course** (code change, separate UG/PhD codes): tick the box on New Grade and select all of them; students are combined (each once; a student on several ERP rows is fine, rows that disagree only give a warning), a Name column from ERP is added to the preview, and every ERP file is saved in the JSON and exported separately
 - 🕒 Exported ERP CSVs are named after the ERP file plus `_CSV_saved_<date-time>` (like the JSON)
-- 🖨️ Print PDF design: a **Bands** switch prints a red-to-blue coloured band per grade along the top of the chart instead of the bubbles; **Preview/Back** shows the printed look on screen. The NC criterion prints centred
+- 📄 **Save PDF**: an A4 landscape PDF made in the browser and saved directly (same on every screen), previewed in a large window where you choose the design (**Bubbles** or red-to-blue **Grade bands** along the top of the chart) and edit the NC criterion
 - 🎓 Transfer students' IDs may end in two or three different campus letters from G, H, P (e.g. `2023A7PS0412GH`, `…HP`, `…GHP`); these are accepted and matched on the full campus part
 - 🧮 **NC Calculator** (histogram page, left button): NC line = a percentage (40 by default) of the median marks or a percentage (30 by default) of the average of the top K students (percentages and K of your choice), lists the students below it, and can shade the NC zone light red on the histogram
-- ❌ The red ✕ button next to it gives NC to everyone below the NC line after a Yes/Cancel confirmation, downloads an `AUTO_BACKUP_` JSON first, and restarts the histogram at the new lowest mark; the rule it used is saved and prefills the NC criterion when you Print PDF
+- ❌ The red ✕ button next to it gives NC to everyone below the NC line after a Yes/Cancel confirmation, downloads an `AUTO_BACKUP_` JSON first, and restarts the histogram at the new lowest mark; the rule it used is saved and prefills the NC criterion in Save PDF
 - 🚫 Duplicate students are refused: the same student on two pasted rows, or twice in a saved JSON (compared on year + roll number + campus, like matching)
 - 🧪 Try with a small dataset first: the **Practice files** section of the Help page has made-up marks and ERP files (8 courses, 30 to 800 students, one with two ERP files) and a saved JSON to download
 

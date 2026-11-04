@@ -384,7 +384,7 @@
     </ul>
     <p class="note">Two common guidelines for <b>NC</b>: marks below <b>40% of the class median</b>, or below
        <b>30% of the average of the top K students</b>. The <a href="#nc-calculator">NC Calculator</a> works out
-       both (both percentages and K can be changed), and the red ✕ button next to it can give NC to everyone below the line. Write the NC criterion you used in the box shown when you click <b>Print PDF</b>.</p>
+       both (both percentages and K can be changed), and the red ✕ button next to it can give NC to everyone below the line. Write the NC criterion you used in the box shown when you click <b>Save PDF</b>.</p>
 </section>
 
 <section class="help-section" id="nc-calculator">
@@ -402,7 +402,7 @@
        numbers, so a line of 70.4 means 70 or less.</p>
     <p>Turn on <b>Shade the NC zone on the histogram</b> to colour the chart light red from the left edge up to the NC
        line, with a dashed red line at its edge. The shading follows the data as you work and is included in
-       <b>Print PDF</b>. Turn the switch off to remove it.</p>
+       the PDF (<b>Save PDF</b>). Turn the switch off to remove it.</p>
     <ul>
         <li>The calculation uses the students in the histogram plus anyone already given NC (so giving NC in
             Search/Edit Grades does not move the line); W and the other non-letter grades are left out.</li>
@@ -426,7 +426,7 @@
             the first mark of the chart, and cutoffs above it are nudged up only if needed to stay in order; check the
             lowest grades' bubbles afterwards.</li>
     </ol>
-    <p>The rule used is remembered and filled in as the NC criterion when you click <b>Print PDF</b>.</p>
+    <p>The rule used is remembered and filled in as the NC criterion when you click <b>Save PDF</b>.</p>
     <p>If no letter-graded student is below the line, the dialog says so and <b>Yes</b> is disabled.</p>
 </section>
 
@@ -487,27 +487,26 @@
             drop-down at the top chooses which file is shown and downloaded. Campus and branch are read from the student ID and shown for
             reference only; the downloaded file has just the ERP columns.</li>
     </ul>
-    <h3>Print PDF</h3>
-    <p>Asks for the <b>NC cutoff and criterion</b> (up to 200 characters), which is printed below the chart,
-       then opens the print dialog in landscape. If you gave NC with the red ✕ button (see
-       <a href="#nc-calculator">NC Calculator</a>), the box is filled in with the rule you used last, for example
-       “NC if marks &lt; 83.7, i.e. 30% of the average marks of the top 3 students (279)”; you can edit it before
-       printing. That rule is also saved in the Save Grades file and kept when you refresh. Choose “Save as PDF” to get a PDF.
-       The criterion is printed centred below the chart. Click the ✕ next to the criterion text afterwards to go back to
-       editing (the buttons and the bubbles come back).</p>
-    <h3>Print design: bubbles or grade bands</h3>
-    <p>To the left of the red ✕ circle are a <b>Bands</b> switch and a small <b>Preview</b> button:</p>
+    <h3>Save PDF</h3>
+    <p><b>Save PDF</b> opens a large window showing the PDF exactly as it will be saved: one <b>A4 landscape</b> page
+       with the course title, the statistics, both grade tables, the histogram (with the cutoff lines and, if switched
+       on, the NC zone shading) and the NC criterion centred below the chart. The PDF is made in your browser and saved
+       straight to your computer (nothing is uploaded), and it looks the same whatever your screen size.</p>
+    <p>Under the preview:</p>
     <ul>
-        <li><b>Bands off</b> (default): the PDF looks like the screen, with the grade bubbles above the cutoff lines.</li>
-        <li><b>Bands on</b>: the PDF shows, instead of the bubbles, a coloured <b>band</b> along the top of the chart for
-            each grade, from that grade's cutoff to the next grade's (A runs to the right end of the chart), with the grade
-            name in the middle. The colours run like a spectrum from red (E) to blue (A). The cutoff lines stop at the top
-            of the chart.</li>
-        <li><b>Preview</b> shows on screen what will be printed with the current switch setting, with
-            “&lt;chosen NC criteria to appear here&gt;” where the criterion will go; click <b>Back</b> to return to
-            editing. While the bands are shown the bubbles are hidden, so cutoffs cannot be dragged; go back to change them.</li>
+        <li><b>Design</b>: <b>Bubbles</b> (as on screen: a ball on a stick on each cutoff line) or <b>Grade bands</b>: a
+            coloured band along the top of the chart for each grade, from that grade's cutoff to the next grade's (A runs
+            to the right end of the chart), with the grade name in the middle; the colours run from red (E) to blue (A)
+            and the cutoff lines stop at the top of the chart. The window always opens on Bubbles.</li>
+        <li><b>NC cutoff and criterion</b> (up to 200 characters), printed below the chart. If you gave NC with the red ✕
+            button (see <a href="#nc-calculator">NC Calculator</a>), it is filled in with the rule you used last, for
+            example “NC if marks &lt; 83.7, i.e. 30% of the average marks of the top 3 students (279)”; you can edit it.
+            The PDF's font has no “≤” or “≥”: they are written as &lt;= and &gt;=, and other unusual characters as *.</li>
+        <li><b>Cancel</b>, and <b>Save PDF</b>, which downloads the file as, for example,
+            <code>CS F101_PDF_saved_4-11-2026-14-5-3.pdf</code>.</li>
     </ul>
-    <p>The switch and the button are not printed.</p>
+    <p>The preview updates as soon as you change the design or the text. If your browser is set to download PDF files
+       instead of showing them, the window shows only the chart and the criterion as a preview; the saved PDF is complete.</p>
 </section>
 
 <section class="help-section" id="refresh">

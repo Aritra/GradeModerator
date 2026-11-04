@@ -43,13 +43,9 @@
          * Main page: the top panel takes the height it needs; the buttons area is
          * 10% of the window height (see #allControlsBelow); the chart gets the rest.
          */
-        #mainLayout { display: grid; grid-template-rows: auto minmax(0, 1fr) auto 10vh; }
-        /* Row 3 is the print preview's NC placeholder line (#printNoteRow, usually hidden: 0 high);
-           the buttons and the NC criterion line share row 4 */
-        #printNoteRow { grid-row: 3; }
-        #allControlsBelow, #divNCcutoff { grid-row: 4; }
+        #mainLayout { display: grid; grid-template-rows: auto minmax(0, 1fr) 10vh; }
         /* On paper the buttons are hidden, so let the chart use the rest of the page */
-        @media print { #mainLayout { grid-template-rows: auto minmax(0, 1fr) auto auto; } }
+        @media print { #mainLayout { grid-template-rows: auto minmax(0, 1fr) auto; } }
 
         /* Top panel, left: statistics labels/numbers and MGPV, larger than Bootstrap defaults */
         /* Label at the top, number at the bottom, so numbers line up even when
@@ -188,10 +184,9 @@
             .overlayDiv,
             .modal-backdrop,
             #myModal,
-            #ncDialog,
+            #pdfModal,
             #ncCalcModal,
             #ncApplyModal,
-            #ncDismissBtn,
             #gradeTip,
             #titleEditBtn { display: none !important; visibility: hidden !important; }
         }
@@ -287,18 +282,15 @@
                       aspect-ratio: 1 / 1; padding: 0; border-radius: 50%;
                       display: flex; align-items: center; justify-content: center; }
         #ncApplyBtn svg { width: 50%; height: 50%; }
-        /* Print design with grade bands (drawGradeBands on the chart): no bubbles */
-        body.print-bands #gradeBubbleLayer { display: none; }
-        /* Bands switch + Preview/Back button, left of the red X (one button gap apart) */
-        #printCtl { position: absolute; top: 0; height: 5vh; display: flex; align-items: center;
-                    gap: .6rem; white-space: nowrap; font-size: .85rem;
-                    right: calc(100% + var(--bs-gutter-x) * 1.5 + 5vh); }
-        #printCtl .form-check { margin: 0; }
-        #allControlsBelow #printCtl .btn { height: auto; padding: .15rem .6rem; font-size: .8rem; }
-        /* NC criterion line (printed) and its preview placeholder: centred on the page */
-        .nc-print-line { margin: 0; padding: .4rem 3rem; width: 100%; text-align: center;
-                         font-size: .875rem; word-break: break-word; }
-        #printNoteRow .nc-print-line { color: #6c757d; font-style: italic; }
+        /* Save PDF window: almost full screen, PDF preview on top, controls under it */
+        #pdfModal .pdf-dialog  { width: 95vw; max-width: 95vw; height: 95vh; margin: 2.5vh auto; }
+        #pdfModal .pdf-content { height: 100%; }
+        #pdfModal .pdf-body    { display: flex; flex-direction: column; gap: .75rem; min-height: 0; }
+        #pdfPreview            { flex: 1 1 auto; width: 100%; min-height: 0; border: 1px solid #bbb;
+                                 background: #525659; }
+        #pdfModal .pdf-controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        #pdfModal .pdf-nc       { flex: 1 1 22rem; }
+        #pdfModal .pdf-actions  { display: flex; gap: .5rem; margin-left: auto; }
         /* Red close cross (Bootstrap's btn-close icon in red) */
         .btn-close-red { --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23dc3545'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e");
                          --bs-btn-close-opacity: 1; }
@@ -595,18 +587,6 @@
                 <div class="col-sm-10">
                     <div class="row">
                         <div class="col-sm-2" id="ncSlot">
-                            <!-- Print design: Bands switch (Print PDF uses grade bands) and Preview/Back -->
-                            <div id="printCtl">
-                                <div class="form-check form-switch"
-                                     title="On: Print PDF shows a coloured band per grade instead of the bubbles">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="bandsSwitch"
-                                           onchange="onPrintDesignChange();">
-                                    <label class="form-check-label" for="bandsSwitch">Bands</label>
-                                </div>
-                                <button type="button" id="previewBtn" class="btn btn-outline-dark"
-                                        onclick="togglePrintPreview();"
-                                        title="Show the page as it will be printed">Preview</button>
-                            </div>
                             <!-- Mark everyone in the NC zone as NC (openNCApply) -->
                             <button type="button" id="ncApplyBtn" class="btn btn-danger btn-xs"
                                     onclick="openNCApply();"
@@ -637,9 +617,9 @@
                         </div>
                         <div class="col-sm-2">
                             <button type="button" class="btn btn-warning btn-xs"
-                                    onclick="showNCDialog();"
+                                    onclick="openPdfModal();"
                                     style="padding: 5px; width:100%">
-                                Print PDF
+                                Save PDF
                             </button>
                         </div>
                         <div class="col-sm-2">
@@ -661,61 +641,48 @@
             </div>
         </div>
 
-        <!--
-            divNCcutoff: sits in the same grid row position as allControlsBelow.
-            Invisible by default; shown during printing so the NC criterion text
-            appears on the printed page.  Has a cross button to dismiss it.
-        -->
-        <div class="row" id="divNCcutoff" style="display:none;">
-            <div style="position:relative; display:flex; align-items:center; width:100%;">
-                <!-- Centred on the page; the dismiss cross sits at the right edge -->
-                <p id="ncCutoffPrintText" class="nc-print-line"></p>
-                <button id="ncDismissBtn" onclick="hideNCCutoffDiv();"
-                        style="position:absolute; right:20px; background:none; border:none;
-                               font-size:1.25rem; font-weight:bold; cursor:pointer;
-                               line-height:1; color:#555;"
-                        title="Back to editing">&#x2715;</button>
-            </div>
-        </div>
-
-        <!-- Print preview only: where the NC criterion will be printed -->
-        <div class="row" id="printNoteRow" style="display:none;">
-            <p class="nc-print-line">&lt;chosen NC criteria to appear here&gt;</p>
-        </div>
     </div><!-- end .container-fluid -->
 
     <!-- Hover popup for the grade tables, filled by attachGradeTip() handlers -->
     <div id="gradeTip" role="tooltip"></div>
 
-    <!-- ── NC Cutoff dialog modal ────────────────────────────────────────────── -->
-    <div class="modal fade" id="ncDialog" tabindex="-1"
-         aria-labelledby="ncDialogLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="ncDialogLabel">
-                        NC Cutoff &amp; Criterion
-                    </h5>
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- ── Save PDF window (openPdfModal / renderPdfPreview / savePdf) ─────────── -->
+    <div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
+        <div class="modal-dialog pdf-dialog">
+            <div class="modal-content pdf-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="pdfModalLabel">Save PDF (A4 landscape)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <label for="ncCutoffInput" class="form-label">
-                        Please write the NC cutoff and criterion:
-                    </label>
-                    <textarea id="ncCutoffInput" class="form-control"
-                              maxlength="200" rows="4"
-                              placeholder="e.g. NC if marks &lt; 40 and attendance &lt; 75%"
-                              oninput="updateNCCounter();"></textarea>
-                    <small id="ncCounter" class="text-muted" style="float:right;">
-                        200 characters remaining
-                    </small>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning"
-                            onclick="confirmAndPrint();">Print</button>
+                <div class="modal-body pdf-body">
+                    <!-- The PDF itself, in the browser's PDF viewer: exactly the file that is saved -->
+                    <iframe id="pdfPreview" title="PDF preview"></iframe>
+                    <div class="pdf-controls">
+                        <div>
+                            <div class="small fw-bold mb-1">Design</div>
+                            <div class="btn-group" role="group" aria-label="PDF design">
+                                <input type="radio" class="btn-check" name="pdfDesign" id="pdfDesignBubbles"
+                                       value="bubbles" checked onchange="schedulePdfPreview(0);">
+                                <label class="btn btn-outline-primary btn-sm" for="pdfDesignBubbles">Bubbles</label>
+                                <input type="radio" class="btn-check" name="pdfDesign" id="pdfDesignBands"
+                                       value="bands" onchange="schedulePdfPreview(0);">
+                                <label class="btn btn-outline-primary btn-sm" for="pdfDesignBands">Grade bands</label>
+                            </div>
+                        </div>
+                        <div class="pdf-nc">
+                            <label for="ncCutoffInput" class="small fw-bold mb-1">NC cutoff and criterion
+                                (printed below the chart)</label>
+                            <textarea id="ncCutoffInput" class="form-control form-control-sm"
+                                      maxlength="200" rows="2"
+                                      placeholder="e.g. NC if marks &lt; 40 and attendance &lt; 75%"
+                                      oninput="updateNCCounter(); schedulePdfPreview(400);"></textarea>
+                            <small id="ncCounter" class="text-muted">200 characters remaining</small>
+                        </div>
+                        <div class="pdf-actions">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-warning fw-bold" onclick="savePdf();">Save PDF</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -799,6 +766,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <!-- jsPDF builds the PDF in the browser (Save PDF); nothing is uploaded -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
     // ── DOM element references ────────────────────────────────────────────────────
@@ -880,7 +849,7 @@
     // NC zone is shaded on the histogram (saved in the grade object as ncZone)
     // (medPct: percentage of the median; pct: percentage of the top-K average)
     // The NC rule last applied with the red X button, as one sentence (saved as
-    // ncAppliedRule); prefills the NC criterion box of Print PDF
+    // ncAppliedRule); prefills the NC criterion box of Save PDF
     let ncAppliedRule      = '';
     let ncSettings         = { rule: 'median', medPct: 40, k: 3, pct: 30, show: false };
 
@@ -1021,14 +990,14 @@
                 animation: false,
                 events:    enableClick ? ['click'] : [],
                 plugins:   { tooltip: { enabled: false } },
-                layout:    { padding: { top: chartTopPaddingPx() } },
+                layout:    { padding: { top: bubbleHeadroomPx() } },
                 // precision 0: student counts are whole numbers, so no 0.2-step ticks on small classes
                 scales:    { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] },
                 // Window resized: the rem size may have changed, so rescale the
                 // chart's text and bubble headroom (runs before Chart.js re-lays out)
                 onResize:  (chart) => {
                     applyChartFontSize();
-                    chart.options.layout.padding.top = chartTopPaddingPx(chart);
+                    chart.options.layout.padding.top = bubbleHeadroomPx();
                 }
             },
             lineAtIndex: tempLineIndx,
@@ -1634,136 +1603,237 @@
         link.remove();
     }
 
-    /** Print the current view as a landscape PDF. */
-    function printpage() {
-        const style = document.createElement('style');
-        style.type  = 'text/css';
-        style.media = 'print';
-        style.appendChild(document.createTextNode('@page { size: landscape; }'));
-        document.head.appendChild(style);
-        window.print();
-    }
+    // =============================================================================
+    // SAVE PDF
+    // "Save PDF" opens an almost full-screen window showing the PDF itself (in the
+    // browser's PDF viewer), with the design (bubbles or grade bands) and the NC
+    // criterion under it; the preview is rebuilt on every change. The PDF is made
+    // in the browser with jsPDF on an A4 landscape page laid out in millimetres, so
+    // it is the same on every screen: title, statistics and grade tables as text
+    // and lines, the histogram as a sharp image drawn by Chart.js on its own canvas
+    // (cutoff lines, NC zone, and bubbles or bands), the NC criterion centred below.
+    // =============================================================================
+    const pdfModal    = document.getElementById('pdfModal');
+    const pdfPreview  = document.getElementById('pdfPreview');
+    const ncCutoffInput = document.getElementById('ncCutoffInput');
+    let pdfPreviewUrl   = null;
+    let pdfPreviewTimer = null;
 
-    /**
-     * Open the NC cutoff dialog instead of printing directly.
-     * Called by the "Print PDF" button.
-     */
-    function showNCDialog() {
-        // Start from the NC rule last applied with the red X button (empty if none);
-        // it can be edited before printing
-        const input   = document.getElementById('ncCutoffInput');
-        input.value   = ncAppliedRule;
+    // Page geometry (mm): A4 landscape, 10 mm margins
+    const PDF_PAGE  = { w: 297, h: 210, m: 10 };
+    const PDF_CHART = { x: 10, y: 47, w: 277, h: 143 };   // histogram image
+    const PDF_CHART_PX = 1100;                              // chart width in canvas px (drawn at 2x)
+    // Bubbles on the PDF chart (canvas px): ball diameter and the two stick lengths
+    const PDF_BUBBLE = { ball: 24, sticks: [6, 34] };
+    const PDF_FONT_PX = 13;                                 // chart text size (canvas px)
+
+    // Grade bands: E .. A from red to blue, GRADE_BAND_SHARE of the chart's height
+    const GRADE_BAND_SHARE  = 0.08;
+    const GRADE_BAND_COLORS = ['#d7191c', '#f46d43', '#fdae61', '#fee08b',
+                               '#abdda4', '#66c2a5', '#3288bd', '#2b4ca8'];
+
+    /** Open the Save PDF window: Bubbles design, NC criterion prefilled with the last applied rule. */
+    function openPdfModal() {
+        document.getElementById('pdfDesignBubbles').checked = true;
+        ncCutoffInput.value = ncAppliedRule;
         updateNCCounter();
-        new bootstrap.Modal(document.getElementById('ncDialog')).show();
+        bootstrap.Modal.getOrCreateInstance(pdfModal).show();
+        renderPdfPreview();
     }
 
-    /** Live character counter for the NC criterion textarea. */
+    /** Live character counter for the NC criterion box. */
     function updateNCCounter() {
-        const input     = document.getElementById('ncCutoffInput');
-        const remaining = 200 - input.value.length;
+        const remaining = 200 - ncCutoffInput.value.length;
         document.getElementById('ncCounter').textContent =
             remaining + ' character' + (remaining === 1 ? '' : 's') + ' remaining';
     }
 
-    /**
-     * Dismiss the NC dialog, write the criterion text into divNCcutoff,
-     * swap the visibility of allControlsBelow ↔ divNCcutoff, then print.
-     */
-    function confirmAndPrint() {
-        // Close the Bootstrap modal
-        bootstrap.Modal.getInstance(document.getElementById('ncDialog')).hide();
+    /** Rebuild the preview after delay ms (typing waits a little, a design change does not). */
+    function schedulePdfPreview(delay) {
+        clearTimeout(pdfPreviewTimer);
+        pdfPreviewTimer = setTimeout(renderPdfPreview, delay);
+    }
 
-        const text = document.getElementById('ncCutoffInput').value.trim();
-
-        // Grade bands instead of bubbles if the Bands switch is on; the preview's
-        // placeholder line gives way to the real criterion
-        setBandMode(printBands);
-        printNoteRow.style.display = 'none';
-
-        // Populate and reveal the print-only criterion div
-        document.getElementById('ncCutoffPrintText').textContent = text;
-        document.getElementById('allControlsBelow').style.display = 'none';
-        document.getElementById('divNCcutoff').style.display      = 'flex';
-
-        // Bootstrap's .hide() is asynchronous — wait for it to fully remove the
-        // backdrop div from the DOM before opening the print dialog, otherwise the
-        // semi-transparent backdrop tints the print preview.
-        document.getElementById('ncDialog').addEventListener('hidden.bs.modal', function onHidden() {
-            document.getElementById('ncDialog').removeEventListener('hidden.bs.modal', onHidden);
-            // Belt-and-suspenders: forcibly remove any lingering backdrop
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow   = '';
-            document.body.style.paddingRight = '';
-            printpage();
-        });
+    function pdfDesign() {
+        return document.getElementById('pdfDesignBands').checked ? 'bands' : 'bubbles';
     }
 
     /**
-     * Dismiss the NC criterion div and restore the controls bar.
-     * Called by the ✕ button on divNCcutoff.
+     * Show the PDF for the current choices in the preview frame. A browser set to
+     * download PDFs instead of showing them (navigator.pdfViewerEnabled false) would
+     * download on every change, so it gets a simple preview instead: the chart image
+     * and the criterion.
      */
-    function hideNCCutoffDiv() {
-        document.getElementById('divNCcutoff').style.display      = 'none';
-        document.getElementById('allControlsBelow').style.display = '';
-        // Print mode -> edit mode: bubbles back, preview off (the Bands switch is kept)
-        setPrintPreview(false);
-    }
-
-    // =============================================================================
-    // PRINT DESIGN: GRADE BANDS
-    // With the Bands switch on, Print PDF shows one coloured rectangle per active
-    // grade on top of the chart area instead of the draggable bubbles: from the
-    // grade's cutoff to the next active grade's (A: to the right end of the chart),
-    // GRADE_BAND_SHARE of the chart's height, grade name centred in bold white or
-    // black (whichever contrasts better). Preview/Back shows that design (or the
-    // bubbles, with the switch off) on screen with a placeholder NC criterion line.
-    // =============================================================================
-    const GRADE_BAND_SHARE  = 0.08;
-    // E .. A: spectrum from red to blue
-    const GRADE_BAND_COLORS = ['#d7191c', '#f46d43', '#fdae61', '#fee08b',
-                               '#abdda4', '#66c2a5', '#3288bd', '#2b4ca8'];
-    const bandsSwitch  = document.getElementById('bandsSwitch');
-    const previewBtn   = document.getElementById('previewBtn');
-    const printNoteRow = document.getElementById('printNoteRow');
-    let printBands  = false;   // Bands switch: print with grade bands
-    let bandsShown  = false;   // the chart currently shows bands (preview or printing)
-    let previewOn   = false;   // Preview/Back state
-
-    /** Height of the grade bands in px: GRADE_BAND_SHARE of the chart, at least room for the text. */
-    function gradeBandPx(chart) {
-        return Math.max(Math.round(chart.height * GRADE_BAND_SHARE), Math.ceil(remPx() * 1.5));
-    }
-
-    /** Room above the plot: the bands, or the tallest bubble. */
-    function chartTopPaddingPx(chart) {
-        return (bandsShown && chart) ? gradeBandPx(chart) : bubbleHeadroomPx();
-    }
-
-    /** Show the chart with grade bands (true) or with the draggable bubbles (false). */
-    function setBandMode(on) {
-        bandsShown = on;
-        document.body.classList.toggle('print-bands', on);
-        if (mainChart) {
-            mainChart.options.layout.padding.top = chartTopPaddingPx(mainChart);
-            mainChart.update('none');
+    function renderPdfPreview() {
+        if (navigator.pdfViewerEnabled === false) {
+            pdfPreview.removeAttribute('src');
+            pdfPreview.srcdoc =
+                '<body style="margin:0;height:100vh;display:flex;align-items:center;justify-content:center;' +
+                'background:#525659;font:14px sans-serif">' +
+                '<div style="background:#fff;padding:12px 16px;max-width:96%;text-align:center">' +
+                '<p style="margin:0 0 8px;color:#6c757d">This browser saves PDF files instead of showing them, ' +
+                'so only the chart and the NC criterion are previewed here. The saved PDF also has the title, ' +
+                'statistics and grade tables.</p>' +
+                `<img src="${renderPdfChart(pdfDesign())}" style="max-width:100%;max-height:70vh">` +
+                `<p style="margin:6px 0 0">${escapeHtml(pdfText(ncCutoffInput.value.trim()))}</p></div></body>`;
+            return;
         }
+        const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
+        if (!doc) {
+            pdfPreview.srcdoc = '<p style="font:16px sans-serif;color:#fff;padding:1rem">The PDF library could not ' +
+                                'be loaded. Check the internet connection and reload the page.</p>';
+            return;
+        }
+        if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+        pdfPreviewUrl = doc.output('bloburl');
+        pdfPreview.removeAttribute('srcdoc');
+        pdfPreview.src = pdfPreviewUrl + '#toolbar=0&navpanes=0&view=Fit';
     }
 
-    /** Preview (true) shows the page as it will print; Back (false) returns to editing. */
-    function setPrintPreview(on) {
-        previewOn = on;
-        previewBtn.textContent     = on ? 'Back' : 'Preview';
-        previewBtn.title           = on ? 'Back to editing' : 'Show the page as it will be printed';
-        printNoteRow.style.display = on ? '' : 'none';
-        setBandMode(on && printBands);
+    /** Save PDF: download the PDF, named like the JSON (code + "_PDF_saved_" + date-time). */
+    function savePdf() {
+        const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
+        if (!doc) return;
+        doc.save(subjectCode + '_PDF_saved_' + saveStamp() + '.pdf');
+        bootstrap.Modal.getOrCreateInstance(pdfModal).hide();
     }
-    function togglePrintPreview() { setPrintPreview(!previewOn); }
 
-    /** Bands switch changed: remembered for Print PDF, and shown at once while previewing. */
-    function onPrintDesignChange() {
-        printBands = bandsSwitch.checked;
-        if (previewOn) setBandMode(printBands);
+    /**
+     * Text for the PDF's built-in font (Latin-1 only): <= and >= for the maths signs,
+     * plain dashes and quotes, and "*" for any other character it cannot show.
+     */
+    function pdfText(text) {
+        return String(text)
+            .replace(/≤/g, '<=').replace(/≥/g, '>=')
+            .replace(/[‒-―−]/g, '-')
+            .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+            .replace(/…/g, '...')
+            .replace(/[^\x00-\xFF]/g, '*');
+    }
+
+    /**
+     * Build the PDF (jsPDF document) for a design ('bubbles' | 'bands') and NC
+     * criterion text; null if jsPDF is not available.
+     */
+    function buildGradesPdf(design, criterion) {
+        if (!window.jspdf) return null;
+        // compress: the chart image would otherwise be stored uncompressed (about 10 MB)
+        const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(33, 37, 41);
+
+        // Title: course code and name
+        doc.setFontSize(15);
+        doc.text(pdfText(TFSubjectCode.textContent + ' ' + TFSubjectNameText.textContent), PDF_PAGE.m, 15);
+
+        // Statistics (same order as on screen), labels on two lines
+        const stats = [['Total', 'Students', TFtotalStudents], ['Students', 'Graded', TFtotalGraded],
+                       ['Maximum', 'Marks', TFMaxMarks], ['Average', 'Marks', TFAvgMarks]];
+        stats.forEach(([l1, l2, el], i) => {
+            const cx = PDF_PAGE.m + 13 + i * 26;
+            doc.setFontSize(10);
+            doc.text([l1, l2], cx, 24, { align: 'center' });
+            doc.setFontSize(19);
+            doc.text(pdfText(el.textContent.trim()), cx, 39, { align: 'center' });
+        });
+        doc.setFontSize(13);
+        doc.text('MGPV', 133, 24, { align: 'center' });
+        doc.setFontSize(36);
+        doc.text(pdfText(TFMGPV.textContent.trim()), 133, 41, { align: 'center' });
+
+        // Grade tables (read from the page), with the coloured strip between them
+        const tx = 152, tw = PDF_PAGE.w - PDF_PAGE.m - tx, labelW = 34;
+        let ty = 9;
+        ty = drawPdfTable(doc, document.getElementById('nonLetterTable'), tx, ty, tw, labelW);
+        ['#fac92e', '#76c2e5', '#ed1c24'].forEach((c, i) => {
+            doc.setFillColor(c);
+            doc.rect(tx + i * tw / 3, ty, tw / 3, 1.3, 'F');
+        });
+        drawPdfTable(doc, document.getElementById('letterTable'), tx, ty + 1.3, tw, labelW);
+
+        // Histogram
+        doc.addImage(renderPdfChart(design), 'PNG', PDF_CHART.x, PDF_CHART.y, PDF_CHART.w, PDF_CHART.h,
+                     undefined, 'FAST');
+
+        // NC criterion, centred under the chart
+        const text = pdfText(criterion.trim());
+        if (text) {
+            doc.setFontSize(10);
+            doc.setTextColor(33, 37, 41);
+            doc.text(doc.splitTextToSize(text, PDF_PAGE.w - 2 * PDF_PAGE.m - 20).slice(0, 2),
+                     PDF_PAGE.w / 2, PDF_CHART.y + PDF_CHART.h + 6, { align: 'center' });
+        }
+        return doc;
+    }
+
+    /**
+     * Draw one of the page's grade tables into the PDF at (x, y), width w, label
+     * column labelW (the 8 grade columns share the rest). Header rows keep their
+     * colours (grey / navy, bold white). Returns the y below the table.
+     */
+    function drawPdfTable(doc, table, x, y, w, labelW) {
+        const rowH = 6, colW = (w - labelW) / 8;
+        doc.setLineWidth(0.25);
+        doc.setDrawColor(0);
+        Array.from(table.rows).forEach(tr => {
+            const fill = tr.classList.contains('head-grey') ? '#555555'
+                       : tr.classList.contains('head-navy') ? '#000080' : null;
+            Array.from(tr.cells).forEach((td, c) => {
+                const cx = c === 0 ? x : x + labelW + (c - 1) * colW;
+                const cw = c === 0 ? labelW : colW;
+                if (fill) { doc.setFillColor(fill); doc.rect(cx, y, cw, rowH, 'FD'); }
+                else      { doc.rect(cx, y, cw, rowH); }
+                doc.setFont('helvetica', fill ? 'bold' : 'normal');
+                doc.setFontSize(9.5);
+                doc.setTextColor(fill ? '#ffffff' : '#212529');
+                const t = pdfText(td.textContent.trim());
+                if (c === 0) doc.text(t, cx + 1.5, y + rowH / 2, { baseline: 'middle' });
+                else         doc.text(t, cx + cw / 2, y + rowH / 2, { baseline: 'middle', align: 'center' });
+            });
+            y += rowH;
+        });
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor('#212529');
+        return y;
+    }
+
+    /**
+     * Draw the histogram for the PDF on a separate canvas of the PDF image's
+     * proportions (PDF_CHART_PX wide, at 2x for sharpness) and return it as a PNG
+     * data URL. Same bars, cutoff lines and NC zone as the page; the grades are
+     * shown as bubbles or bands drawn on the canvas (see the chart plugin).
+     */
+    function renderPdfChart(design) {
+        const w = PDF_CHART_PX, h = Math.round(PDF_CHART_PX * PDF_CHART.h / PDF_CHART.w);
+        const holder = document.createElement('div');
+        holder.style.cssText = 'position:fixed; left:-10000px; top:0;';
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        holder.appendChild(canvas);
+        document.body.appendChild(holder);
+
+        const headroom = design === 'bands' ? Math.round(h * GRADE_BAND_SHARE)
+                                            : PDF_BUBBLE.sticks[1] + PDF_BUBBLE.ball + 4;
+        const chart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: { labels: xvalues.slice(), datasets: [{ backgroundColor: barColors, data: yvalues.slice() }] },
+            options: {
+                responsive: false, animation: false, devicePixelRatio: 2, events: [],
+                legend: { display: false },
+                layout: { padding: { top: headroom, right: 4 } },
+                scales: {
+                    yAxes: [{ ticks: { beginAtZero: true, precision: 0, fontSize: PDF_FONT_PX } }],
+                    xAxes: [{ ticks: { fontSize: PDF_FONT_PX - 2 } }]
+                }
+            },
+            lineAtIndex: keepG.reduce((acc, on, i) => { if (on) acc.push(gCutOffs[i] - markLowest); return acc; }, []),
+            pdfDesign: design
+        });
+        const url = canvas.toDataURL('image/png');
+        chart.destroy();
+        holder.remove();
+        return url;
     }
 
     /** '#rrggbb' -> bold text colour with the better contrast: black or white. */
@@ -1775,18 +1845,27 @@
         return (L + 0.05) / 0.05 >= 1.05 / (L + 0.05) ? '#000' : '#fff';
     }
 
-    /** Draw the grade bands above the plot area (main chart, bands mode only). */
+    /** Active grades, lowest first. */
+    function activeGrades() {
+        const out = [];
+        for (let g = 0; g < 8; g++) if (keepG[g]) out.push(g);
+        return out;
+    }
+
+    /**
+     * Grade bands (PDF chart): one rectangle per active grade just above the plot,
+     * from its cutoff to the next active grade's (A: to the right end of the plot),
+     * GRADE_BAND_SHARE of the chart's height, grade name centred in bold black or white.
+     */
     function drawGradeBands(chart) {
-        const active = [];
-        for (let g = 0; g < 8; g++) if (keepG[g]) active.push(g);
-        const top  = chart.scales['y-axis-0'].top;
-        const h    = gradeBandPx(chart);
-        const ctx  = chart.chart.ctx;
-        const font = Chart.defaults.global.defaultFontSize;
+        const active = activeGrades();
+        const top = chart.scales['y-axis-0'].top;
+        const h   = Math.round(chart.height * GRADE_BAND_SHARE);
+        const ctx = chart.chart.ctx;
         ctx.save();
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = `bold ${Math.round(font * 1.15)}px ${Chart.defaults.global.defaultFontFamily}`;
+        ctx.font = `bold ${Math.round(PDF_FONT_PX * 1.3)}px ${Chart.defaults.global.defaultFontFamily}`;
         active.forEach((g, k) => {
             const x0 = getCutoffX(chart, gCutOffs[g] - markLowest);
             const x1 = (k + 1 < active.length) ? getCutoffX(chart, gCutOffs[active[k + 1]] - markLowest)
@@ -1795,6 +1874,37 @@
             ctx.fillRect(x0, top - h, x1 - x0, h);
             ctx.fillStyle = bandTextColor(GRADE_BAND_COLORS[g]);
             ctx.fillText(gradeNames[g], (x0 + x1) / 2, top - h / 2);
+        });
+        ctx.restore();
+    }
+
+    /**
+     * Bubbles (PDF chart): the on-screen "ball on a stick" drawn on the canvas, one per
+     * active grade on its cutoff line, stick lengths alternating like on screen.
+     */
+    function drawCanvasBubbles(chart) {
+        const top = chart.scales['y-axis-0'].top;
+        const r   = PDF_BUBBLE.ball / 2;
+        const ctx = chart.chart.ctx;
+        ctx.save();
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${Math.round(PDF_FONT_PX * 0.95)}px ${Chart.defaults.global.defaultFontFamily}`;
+        activeGrades().forEach((g, tier) => {
+            const x     = getCutoffX(chart, gCutOffs[g] - markLowest);
+            const stick = PDF_BUBBLE.sticks[tier % 2];
+            ctx.strokeStyle = '#000088';
+            ctx.lineWidth   = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, top - stick);
+            ctx.stroke();
+            ctx.fillStyle = '#000088';
+            ctx.beginPath();
+            ctx.arc(x, top - stick - r, r, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.fillText(gradeNames[g], x, top - stick - r);
         });
         ctx.restore();
     }
@@ -2325,7 +2435,7 @@
         if (changes.size === 0) return;
         downloadGradeJSON('AUTO_BACKUP_');
         // Remembered after the backup (which holds the state before this change);
-        // Print PDF prefills its NC criterion box with it
+        // Save PDF prefills its NC criterion box with it
         ncAppliedRule = `NC if marks < ${fmtMarks(line.value)}, i.e. ${line.rule}`.slice(0, 200);
         applyNonLetterGrades(changes);
         resetHistogramMinimum();
@@ -2358,7 +2468,7 @@
     const verticalLinePlugin = {
         /** NC zone shading goes behind the bars (main chart only). */
         beforeDatasetsDraw(chart) {
-            if (chart.canvas === myCanvas) drawNCZone(chart);
+            if (chart.canvas === myCanvas || chart.config.pdfDesign) drawNCZone(chart);
         },
 
         /** Draw a single vertical cutoff line (the grade name is on its bubble). */
@@ -2383,10 +2493,10 @@
             }
             // Runs after every draw of the main chart (first render, cutoff
             // changes, window resize), so the bubbles always follow the lines.
-            if (chart.canvas === myCanvas) {
-                positionGradeBubbles(chart);
-                if (bandsShown) drawGradeBands(chart);
-            }
+            if (chart.canvas === myCanvas) positionGradeBubbles(chart);
+            // The chart drawn for the PDF shows the grades on the canvas itself
+            if (chart.config.pdfDesign === 'bands')   drawGradeBands(chart);
+            if (chart.config.pdfDesign === 'bubbles') drawCanvasBubbles(chart);
         }
     };
     Chart.plugins.register(verticalLinePlugin);
