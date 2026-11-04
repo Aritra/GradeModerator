@@ -823,7 +823,8 @@
     let markMap            = "";   // [[studentID, marks, name], ...]
     let spGMap             = "";   // [[studentID, specialGrade, name, marks], ...]
     let fullMarks          = 0;
-    let retCSV             = "";   // 2D array: ERP CSV with grades filled in
+    let retCSV             = "";   // 2D array: ERP CSV with grades filled in (= erpFiles[0].csv)
+    let erpFiles           = [];   // every ERP file of the course: [{name, csv: 2D array}]
     let specialG           = [];   // counts of non-letter grades
     let keepG              = [];   // boolean[8]: which letter grades are active
     let gCutOffs           = [];   // int[8]: minimum marks for each grade
@@ -1398,13 +1399,15 @@
     }
 
     /**
-     * Fill grade and marks into retCSV rows for all letter-graded students,
-     * and special-grade codes for special-grade students.
+     * Fill grade and marks into the rows of one ERP CSV (2D array) for all
+     * letter-graded students, and special-grade codes for special-grade students.
+     * Every row is filled, so a student listed on several rows gets the same marks
+     * and grade on each; rows are never added or removed.
      * Alerts if a student in the ERP CSV cannot be found in either map.
      */
-    function fillGradesIntoCSV() {
-        for (let i = 1; i < retCSV.length; i++) {
-            const idFromERP = retCSV[i][ERP_ID_COL];
+    function fillGradesIntoCSV(csv) {
+        for (let i = 1; i < csv.length; i++) {
+            const idFromERP = csv[i][ERP_ID_COL];
             if (typeof idFromERP === "undefined") continue;
 
             const idxMM = indexFromMarkMap(idFromERP);
@@ -1412,21 +1415,31 @@
                 // Letter-graded student — assign grade from current cutoffs
                 const studentM = markMap[idxMM][1];
                 const grade    = getGradeFromMarks(studentM);
-                if (grade) retCSV[i][ERP_GRADE_COL] = grade;
-                retCSV[i][ERP_MARKS_COL] = studentM;
+                if (grade) csv[i][ERP_GRADE_COL] = grade;
+                csv[i][ERP_MARKS_COL] = studentM;
             } else {
                 // Special-grade student
                 const idxSP = indexFromSPGMap(idFromERP);
                 if (idxSP >= 0) {
-                    retCSV[i][ERP_GRADE_COL] = spGMap[idxSP][1];
-                    retCSV[i][ERP_MARKS_COL] = spGMap[idxSP][3];
+                    csv[i][ERP_GRADE_COL] = spGMap[idxSP][1];
+                    csv[i][ERP_MARKS_COL] = spGMap[idxSP][3];
                 } else {
-                    retCSV[i][ERP_GRADE_COL] = "W";
-                    retCSV[i][ERP_MARKS_COL] = 0;
+                    csv[i][ERP_GRADE_COL] = "W";
+                    csv[i][ERP_MARKS_COL] = 0;
                     alert(`${idFromERP} is missing in your sheet but present in the ERP CSV.\nFix it manually!`);
                 }
             }
         }
+    }
+
+    /** Fill the current grades into every ERP file of the course. */
+    function fillGradesIntoAllERPFiles() {
+        erpFiles.forEach(f => fillGradesIntoCSV(f.csv));
+    }
+
+    /** Download name for an exported ERP file: its own name + "_CSV_saved_" + date-time. */
+    function exportedERPName(name, stamp) {
+        return name.replace(/\.csv$/i, '') + '_CSV_saved_' + stamp + '.csv';
     }
 
     /**
@@ -1466,8 +1479,10 @@
         btnSort.style.margin = '0 10px';
         btnSort.onclick = () => {
             document.body.removeChild(dialog);
-            fillGradesIntoCSV();   // mutate retCSV with current grades
-            const gradesToExport = { retCSV: retCSV, retCSVName: desFileName };
+            fillGradesIntoAllERPFiles();   // mutate every ERP file with the current grades
+            // retCSV / retCSVName: first file, for a sort page from before multiple ERP files
+            const gradesToExport = { retCSV: retCSV, retCSVName: desFileName,
+                                     erpFiles: erpFiles };
             sessionStorage.setItem("gradeObject2", JSON.stringify(gradesToExport));
             window.open('sortStudents.html', '_blank');
         };
@@ -1479,22 +1494,32 @@
         document.body.appendChild(dialog);
     }
 
-    /** Fill grades into retCSV and trigger a direct CSV download. */
+    /**
+     * Fill the grades into every ERP file and download each one, named after the
+     * ERP file with a date-time stamp (like the JSON). A preview tab shows all of them.
+     */
     function exportCSV() {
-        fillGradesIntoCSV();
-        // Open a preview tab (matches original behaviour)
+        fillGradesIntoAllERPFiles();
+        const stamp = saveStamp();
+
+        // Preview tab (matches original behaviour): each file under its name
         const tab = window.open('about:blank', '_blank');
-        tab.document.write((arrayToCSV(retCSV)).replace(/(?:\r\n|\r|\n)/g, '<br>'));
+        tab.document.write(erpFiles.map(f =>
+            `<h3>${escapeHtml(exportedERPName(f.name, stamp))}</h3>` +
+            escapeHtml(arrayToCSV(f.csv)).replace(/(?:\r\n|\r|\n)/g, '<br>')).join('<hr>'));
         tab.document.close();
 
-        // Trigger download
-        const uri  = "data:text/csv;charset=utf-8," + encodeURIComponent(arrayToCSV(retCSV));
-        const link = document.createElement('a');
-        link.setAttribute("href", uri);
-        link.setAttribute("download", desFileName);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        // One download per file; spaced out a little so the browser starts each one
+        // (Chrome asks once whether the site may download several files)
+        erpFiles.forEach((f, i) => setTimeout(() => {
+            const uri  = "data:text/csv;charset=utf-8," + encodeURIComponent(arrayToCSV(f.csv));
+            const link = document.createElement('a');
+            link.setAttribute("href", uri);
+            link.setAttribute("download", exportedERPName(f.name, stamp));
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }, i * 400));
     }
 
     /**
@@ -1509,7 +1534,8 @@
             subjectName: gradesDetails.subjectName,
             fullMarks:   fullMarks,
             mMap:        markMap,
-            retCSV:      retCSV,
+            retCSV:      retCSV,          // first ERP file, for older pages
+            erpFiles:    erpFiles,
             specialG:    [0,0,0,0,0,0,0,0],
             specialGMap: spGMap,
             keepG:       keepG,
@@ -1553,13 +1579,17 @@
      * Save Grades uses no prefix; Search/Edit Grades downloads an "AUTO_BACKUP_"
      * copy just before applying non-letter grade changes (they cannot be undone).
      */
+    /** Date-time stamp used in saved file names: d-m-yyyy-h-m-s. */
+    function saveStamp() {
+        const now = new Date();
+        return `${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`
+             + `-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+    }
+
     function downloadGradeJSON(prefix) {
         const savedDetails = buildGradeObject();
 
-        const now      = new Date();
-        const stamp    = `_JSON_saved_${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`
-                       + `-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-        const filename = prefix + subjectCode + stamp;
+        const filename = prefix + subjectCode + '_JSON_saved_' + saveStamp();
         const uri      = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedDetails));
 
         const link = document.createElement('a');
@@ -2297,12 +2327,17 @@
         subjectCode  = gradesDetails.code;
         markMap      = gradesDetails.mMap;
         fullMarks    = gradesDetails.fullMarks;
-        retCSV       = gradesDetails.retCSV;
+        // Every ERP file of the course; JSON files from before multiple ERP files
+        // have only retCSV / retCSVName, which become a one-file list
+        erpFiles     = (Array.isArray(gradesDetails.erpFiles) && gradesDetails.erpFiles.length > 0)
+                     ? gradesDetails.erpFiles
+                     : [{ name: gradesDetails.retCSVName, csv: gradesDetails.retCSV }];
+        retCSV       = erpFiles[0].csv;
         specialG     = gradesDetails.specialG;
         spGMap       = gradesDetails.specialGMap;
         keepG        = gradesDetails.keepG;
         gCutOffs     = gradesDetails.gCutOffs;
-        desFileName  = gradesDetails.retCSVName;
+        desFileName  = erpFiles[0].name;
         if (gradesDetails.ncZone) ncSettings = Object.assign(ncSettings, gradesDetails.ncZone);
         if (typeof gradesDetails.ncAppliedRule === 'string') ncAppliedRule = gradesDetails.ncAppliedRule;
 

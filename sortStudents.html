@@ -9,6 +9,13 @@
 </head>
 <body onload="defaultState()">
     <div class="container-fluid mt-3">
+        <!-- Shown only when the course has more than one ERP file: choose which one to sort and export -->
+        <div class="row mb-2" id="erpFileRow" style="display:none;">
+            <div class="col-auto d-flex align-items-center gap-2">
+                <label for="erpFileSelect" class="fw-bold mb-0">ERP file:</label>
+                <select id="erpFileSelect" class="form-select form-select-sm" style="width:auto;"></select>
+            </div>
+        </div>
         <div class="row mb-3">
             <div class="col text-center">
                 <div class="form-check form-check-inline">
@@ -202,9 +209,19 @@
          * Filter out any blank/undefined trailing header entries that can appear
          * when the ERP CSV has trailing commas.
          */
-        const erpHeaders = gradesToExport.retCSV[0].filter(
-            h => h !== undefined && h.toString().trim() !== ''
-        );
+        // Every ERP file of the course ([{name, csv}]); older histogram pages pass only retCSV
+        const erpFiles = (gradesToExport.erpFiles && gradesToExport.erpFiles.length > 0)
+                       ? gradesToExport.erpFiles
+                       : [{ name: gradesToExport.retCSVName, csv: gradesToExport.retCSV }];
+        let currentFile = erpFiles[0];   // the ERP file shown, sorted and exported
+
+        let erpHeaders = [];
+        function computeHeaders() {
+            erpHeaders = currentFile.csv[0].filter(
+                h => h !== undefined && h.toString().trim() !== ''
+            );
+        }
+        computeHeaders();
 
         /**
          * Convert the raw 2D retCSV rows into plain objects keyed by header name,
@@ -216,7 +233,7 @@
          * @return {Object[]}
          */
         function buildEnrichedData() {
-            return gradesToExport.retCSV.slice(1).map(row => {
+            return currentFile.csv.slice(1).map(row => {
                 const obj = {};
                 erpHeaders.forEach((h, i) => {
                     obj[h] = (row[i] !== undefined ? row[i] : '');
@@ -231,8 +248,9 @@
             });
         }
 
-        // Master data array (never mutated) — used as source for every sort
-        const enrichedData    = buildEnrichedData();
+        // Master data array (never mutated) — used as source for every sort;
+        // rebuilt only when another ERP file is chosen
+        let enrichedData      = buildEnrichedData();
         // Currently displayed (possibly sorted) data — used for export
         let currentSortedData = [...enrichedData];
 
@@ -327,6 +345,19 @@
             radio.addEventListener('change', function () { sortData(this.value); });
         });
 
+        // Several ERP files: a drop-down chooses which one is shown, sorted and exported
+        const erpFileSelect = document.getElementById('erpFileSelect');
+        if (erpFiles.length > 1) {
+            erpFiles.forEach((f, i) => erpFileSelect.add(new Option(f.name, i)));
+            document.getElementById('erpFileRow').style.display = '';
+            erpFileSelect.addEventListener('change', function () {
+                currentFile  = erpFiles[Number(this.value)];
+                computeHeaders();
+                enrichedData = buildEnrichedData();
+                sortData(document.querySelector('input[name="sortOption"]:checked').value);
+            });
+        }
+
         /**
          * Export the currently displayed rows as a CSV file.
          * Only original ERP columns are written (Campus / Branch are display-only).
@@ -348,7 +379,12 @@
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
             a.href     = url;
-            a.download = gradesToExport.retCSVName || 'grades.csv';
+            // ERP file name + date-time stamp, like the histogram's direct export
+            const base = (currentFile.name || 'grades.csv').replace(/\.csv$/i, '');
+            const now  = new Date();
+            const stamp = `${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`
+                        + `-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+            a.download = base + '_CSV_saved_' + stamp + '.csv';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

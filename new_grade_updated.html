@@ -25,6 +25,10 @@
         #pastePreview tr.paste-header > td { background-color: #0a1f66; color: #fff; font-weight: bold; }
         #pastePreview tr.paste-data   > td { background-color: #fff9c4; }
         #pastePreview tr.paste-bad    > td { background-color: #f8d7da; }
+        /* Name column, filled from the ERP file(s) once they are submitted */
+        #pastePreview tr.paste-data > td.paste-noerp { color: #8a5a00; font-style: italic; }
+        .erp-warn { color: #8a5a00; }
+        .erp-warn ul { margin-bottom: .25rem; }
     </style>
 </head>
 <body onload="defaultState()">
@@ -37,7 +41,7 @@
                     <p>
                         Paste marks data copied from Excel or Google Sheets.<br>
                         <strong>First column = Student ID, second column = Marks.</strong><br>
-                        Then upload the ERP CSV file.
+                        Then upload the ERP CSV file(s).
                     </p>
                 </div>
                 <img src="imgs/separator.svg" class="mx-auto d-block" style="width:100%">
@@ -93,11 +97,18 @@
 
                 <!-- Destination (ERP) CSV upload form (unchanged) -->
                 <div style="padding-top: 15px;">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" id="multiErpChk" onchange="onMultiErpChange();">
+                        <label class="form-check-label" for="multiErpChk">
+                            This course has more than one ERP file (for example different course codes for the same
+                            course, or separate UG and PhD codes); select all of them together
+                        </label>
+                    </div>
                     <label for="UploadDESFile" class="form-label mb-0">
-                        Select the student list CSV file downloaded from ERP (only .csv files are accepted).
+                        Select the student list CSV file(s) downloaded from ERP (only .csv files are accepted).
                     </label>
                     <div class="text-danger fw-bold mb-1">
-                        Do not rename the ERP file: the subject code is read from its file name.
+                        Do not rename the ERP file(s): the subject code is read from the file name.
                     </div>
                     <form id="formDES">
                         <input type="file" id="UploadDESFile" accept=".csv" autocomplete="off" style="width: 79.5%;" />
@@ -135,6 +146,7 @@
         const pasteArea     = document.getElementById("pasteMarksData");
         const pastePreviewWrap = document.getElementById("pastePreviewWrap");
         const pastePreviewBody = document.querySelector("#pastePreview tbody");
+        const multiErpChk   = document.getElementById("multiErpChk");
 
         // ── State ─────────────────────────────────────────────────────────────────
         let chosenIDIdx     = 0;      // always first column (0)
@@ -145,7 +157,8 @@
         let subjectCode     = "";
         let desFileName     = "";
         let csvSRCtxt       = [];     // 2D array from pasted marks data
-        let csvDEStxt       = [];     // 2D array from ERP (destination) CSV
+        let erpFiles        = [];     // ERP (destination) CSVs: [{name, rows: 2D array}], kept untouched
+        let erpUnion        = null;   // all ERP students, each once: see buildErpUnion()
 
         // ERP CSV column indices — must not change; these are the ERP format constants
         const ERP_ID_COL    = 3;
@@ -203,7 +216,10 @@
             subjectCode     = '';
             desFileName     = '';
             csvSRCtxt       = [];
-            csvDEStxt       = [];
+            erpFiles        = [];
+            erpUnion        = null;
+            multiErpChk.checked = false;
+            csvDESFile.multiple = false;
 
             renderPastePreview([], []);
             document.getElementById("demo").innerHTML = '';
@@ -418,6 +434,34 @@
                 tr.classList.toggle('paste-data',   chosenStartRow >= 0 && i >= chosenStartRow);
                 tr.classList.toggle('paste-bad',    badIds.has(i));
             });
+            updatePreviewNames();
+        }
+
+        /**
+         * Once the ERP file(s) are loaded, add a Name column to the preview: the ERP
+         * name of each pasted student (matched with idMatchKey), or "not in ERP, will
+         * be ignored" (the ERP files are the master list). The column title goes on
+         * the last header row. Without ERP data the column is removed.
+         */
+        function updatePreviewNames() {
+            Array.from(pastePreviewBody.rows).forEach((tr, i) => {
+                let td = tr.querySelector('td.paste-name');
+                if (!erpUnion) { if (td) td.remove(); return; }
+                if (!td) {
+                    td = document.createElement('td');
+                    td.className = 'paste-name';
+                    tr.appendChild(td);
+                }
+                td.classList.remove('paste-noerp');
+                if (chosenStartRow < 0 || i < chosenStartRow) {
+                    td.textContent = (i === chosenStartRow - 1) ? 'Name (from ERP)' : '';
+                    return;
+                }
+                const id = (csvSRCtxt[i] && csvSRCtxt[i][0] || '').trim();
+                const st = id ? erpUnion.byKey.get(idMatchKey(id)) : null;
+                td.textContent = st ? st.name : (id ? 'not in ERP, will be ignored' : '');
+                if (id && !st) td.classList.add('paste-noerp');
+            });
         }
 
         /**
@@ -577,53 +621,147 @@
             return csv.split("\n").map(row => row.split(","));
         }
 
-        // ── ERP file upload handler (unchanged) ───────────────────────────────────
+        // ── ERP files: one or several, combined into one list of students ─────────
 
-        formDES.addEventListener("submit", function (e) {
+        /** Multiple-ERP tick box: lets the file chooser take several files at once. */
+        function onMultiErpChange() {
+            csvDESFile.multiple = multiErpChk.checked;
+            csvDESFile.value    = '';
+        }
+
+        /** Course code from an ERP file name (..._CODE_NUMBER_...csv), e.g. "CS F213". */
+        function codeFromErpName(name) {
+            const parts = name.split("_");
+            return parts[1] + " " + parts[2];
+        }
+
+        /**
+         * Combine the rows of all ERP files into one list of students, each student
+         * once (rows are the same student when their idMatchKey agrees: within a file,
+         * e.g. the same student under two class numbers, or across files). The files
+         * themselves are never changed; on export every row is filled in.
+         * For each student the first row's ID and name are used, and a non-letter
+         * grade (W, I, ...) on any row wins. Rows of one student that disagree on the
+         * ID, the name or the non-letter grade are reported in conflicts (a different
+         * letter grade already in ERP is not a conflict: it is overwritten on export).
+         * Returns { students: [{id, name, grade, rows}], byKey: Map, conflicts: [...] }.
+         */
+        function buildErpUnion(files) {
+            const byKey = new Map();
+            const students = [];
+            files.forEach(f => {
+                for (let j = 1; j < f.rows.length; j++) {
+                    const row = f.rows[j];
+                    if (typeof row[ERP_ID_COL] === "undefined") continue;   // e.g. the empty last line
+                    const id = row[ERP_ID_COL].trim();
+                    if (id === '') continue;
+                    const name  = (row[ERP_NAME_COL]  || '').trim();
+                    const grade = (row[ERP_GRADE_COL] || '').trim();
+                    const key   = idMatchKey(id);
+                    let st = byKey.get(key);
+                    if (!st) {
+                        st = { id, name, grade, rows: [] };
+                        byKey.set(key, st);
+                        students.push(st);
+                    }
+                    // nonLetter: the grade as far as grading is concerned ('' = letter or blank)
+                    st.rows.push({ file: f.name, line: j + 1, id, name, nonLetter: isSpecialGrade(grade) ? grade : '' });
+                }
+            });
+            const conflicts = [];
+            students.forEach(st => {
+                const special = st.rows.find(r => r.nonLetter);
+                if (special) st.grade = special.nonLetter;
+                const fields = ['nonLetter', 'name', 'id'].filter(f => new Set(st.rows.map(r => r[f])).size > 1);
+                if (fields.length > 0) conflicts.push({ st, fields });
+            });
+            return { students, byKey, conflicts };
+        }
+
+        /** Warning (HTML) listing students whose ERP rows disagree; '' if there are none. */
+        function erpConflictMessage(conflicts) {
+            if (conflicts.length === 0) return '';
+            const LABEL = { nonLetter: 'ERP grade', name: 'name', id: 'ID' };
+            const items = conflicts.slice(0, 10).map(({ st, fields }) => {
+                const parts = fields.map(f => {
+                    const seen = new Map();   // value -> first place it appears
+                    st.rows.forEach(r => { if (!seen.has(r[f])) seen.set(r[f], `${r.file} line ${r.line}`); });
+                    const values = [...seen].map(([v, where]) =>
+                        `“${escapeHtml(v || (f === 'nonLetter' ? 'letter/blank' : '(empty)'))}” (${escapeHtml(where)})`);
+                    return `${LABEL[f]}: ${values.join(' vs ')}`;
+                });
+                return `<li><b>${escapeHtml(st.id)}</b>: ${parts.join('; ')}</li>`;
+            }).join('');
+            return `<div class="erp-warn">⚠️ ${conflicts.length} student(s) appear on more than one ERP row with different details. ` +
+                   `Continuing with the first row's ID and name, and a non-letter grade (such as W) if any of the rows has one:` +
+                   `<ul>${items}</ul>${conflicts.length > 10 ? '… and ' + (conflicts.length - 10) + ' more' : ''}</div>`;
+        }
+
+        // ── ERP file upload handler ──────────────────────────────────────────────
+
+        formDES.addEventListener("submit", async function (e) {
             e.preventDefault();
-            const input = csvDESFile.files[0];
-            if (!input) return;
+            const files = [...csvDESFile.files];
+            if (files.length === 0) return;
 
             // accept=".csv" only filters the file picker; "All files" can still be chosen
-            if (!/\.csv$/i.test(input.name)) {
-                document.getElementById("demo").innerHTML = "❌ The ERP file must be a .csv file.";
+            const notCsv = files.filter(f => !/\.csv$/i.test(f.name));
+            if (notCsv.length > 0) {
+                document.getElementById("demo").innerHTML =
+                    `❌ ERP files must be .csv files (${notCsv.map(f => escapeHtml(f.name)).join(', ')}).`;
                 csvDESFile.value = "";
                 return;
             }
 
-            // Extract subject code from the ERP filename convention: ..._CODE_NAME_...csv
-            desFileName  = input.name.split(/(\\|\/)/g).pop();
-            const parts  = desFileName.split("_");
-            subjectCode  = parts[1] + " " + parts[2];
+            const loaded = [];
+            for (const f of files) {
+                loaded.push({ name: f.name.split(/(\\|\/)/g).pop(), rows: csvToArray(await f.text()) });
+            }
+            const union = buildErpUnion(loaded);
+            if (union.students.length === 0) {
+                document.getElementById("demo").innerHTML += `<br>❌ No students were found in the ERP file(s).`;
+                csvDESFile.value = "";
+                return;
+            }
 
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const rows = csvToArray(e.target.result);
+            erpFiles = loaded;
+            erpUnion = union;
+            // Subject code from the file name(s), e.g. "BITS F459 + CS U459"
+            desFileName = loaded[0].name;
+            subjectCode = [...new Set(loaded.map(f => codeFromErpName(f.name)))].join(' + ');
 
-                // Reject an ERP file that lists the same student twice: grades are written
-                // back by ID, so a duplicate would get an arbitrary one of the two results
-                const items = [];
-                for (let j = 1; j < rows.length; j++) {
-                    if (typeof rows[j][ERP_ID_COL] !== "undefined") items.push({ id: rows[j][ERP_ID_COL], where: j });
-                }
-                const groups = duplicateIdGroups(items);
-                if (groups.length > 0) {
-                    csvDEStxt = [];
-                    csvDESFile.value = "";
-                    showHistBtn.disabled = true;
-                    document.getElementById("demo").innerHTML +=
-                        `<br>❌ The ERP file ${escapeHtml(desFileName)} lists ${groups.length} student(s) more than once ` +
-                        `(${duplicateIdExamples(groups, 'lines', it => it.where + 1)}). ` +
-                        `Please download a fresh copy from ERP, or remove the extra lines without renaming the file, and upload it again.`;
-                    return;
-                }
-
-                csvDEStxt = rows;
-                enableGoBtn();
-                document.getElementById("demo").innerHTML += `<br>📂 ERP file loaded: ${desFileName} (${csvDEStxt.length} rows). Ready to show histogram.`;
-            };
-            reader.readAsText(input);
+            const demo = document.getElementById("demo");
+            const rowCount = loaded.reduce((n, f) => n + f.rows.slice(1).filter(r => typeof r[ERP_ID_COL] !== "undefined" && r[ERP_ID_COL].trim() !== '').length, 0);
+            demo.innerHTML += `<br>📂 ERP file(s) loaded: ${loaded.map(f => escapeHtml(f.name)).join(', ')}: ` +
+                `${union.students.length} student(s)` +
+                (rowCount > union.students.length ? ` (${rowCount - union.students.length} repeated row(s) counted once)` : '') +
+                `. The names are shown in the table above. Ready to show histogram.`;
+            const noName = union.students.filter(st => st.name === '');
+            if (noName.length > 0) {
+                demo.innerHTML += `<br><span class="erp-warn">⚠️ ${noName.length} ERP student(s) have no name: ` +
+                    `${noName.slice(0, 5).map(st => escapeHtml(st.id)).join(', ')}${noName.length > 5 ? ', …' : ''}.</span>`;
+            }
+            const conflict = erpConflictMessage(union.conflicts);
+            if (conflict) demo.innerHTML += conflict;
+            const notInErp = pastedNotInErp();
+            if (notInErp.length > 0) {
+                demo.innerHTML += `<br>ℹ️ ${notInErp.length} pasted student(s) are not in the ERP file(s) and will be ignored ` +
+                    `(marked in the Name column).`;
+            }
+            highlightPastePreview();
+            enableGoBtn();
         });
+
+        /** Pasted student IDs (from the starting row) that are in none of the ERP files. */
+        function pastedNotInErp() {
+            if (!erpUnion || chosenStartRow < 0) return [];
+            const out = [];
+            for (let i = chosenStartRow; i < csvSRCtxt.length; i++) {
+                const id = (csvSRCtxt[i][0] || '').trim();
+                if (id && !erpUnion.byKey.has(idMatchKey(id))) out.push(id);
+            }
+            return out;
+        }
 
         // ── Main action: open histogram (modified to use fixed column indices) ─────
 
@@ -670,7 +808,7 @@
             }
 
             // Check that ERP data is loaded
-            if (!csvDEStxt || csvDEStxt.length === 0) {
+            if (!erpUnion) {
                 document.getElementById("demo").innerHTML = "❌ Please upload the ERP CSV file.";
                 return;
             }
@@ -683,57 +821,30 @@
             const keepGrades      = [true, true, true, true, true, true, true, true];
             const gradeCutOffs    = [];  // empty → histogram will compute even divisions
 
-            const erpRows = csvDEStxt.length;
-            const srcRows = csvSRCtxt.length;
-
-            // Primary loop: iterate ERP rows so every ERP student is accounted for
-            for (let j = 1; j < erpRows; j++) {
-                const idFromERP   = csvDEStxt[j][ERP_ID_COL];
-                const nameFromERP = csvDEStxt[j][ERP_NAME_COL];
-                if (typeof idFromERP === "undefined") continue;
-
-                const cleanID   = idFromERP.trim();
-                const cleanName = nameFromERP.trim();
-                const erpKey    = idMatchKey(cleanID);
-                let studentFound = false;
-
-                // Search source (pasted) data for a matching student ID
-                for (let i = chosenStartRow; i < srcRows; i++) {
-                    const tempID = csvSRCtxt[i][chosenIDIdx];   // column 0 = ID
-                    if (typeof tempID === "undefined") continue;
-
-                    const studentMarks = parseInt(csvSRCtxt[i][chosenMarksIdx], 10); // column 1 = marks
-
-                    // Match on year + roll number + campus only (see idMatchKey); the student
-                    // is stored with the ERP's ID so lists and exports use ERP's programme code
-                    if (idMatchKey(tempID) === erpKey) {
-                        studentFound     = true;
-                        const asPerERP   = csvDEStxt[j][ERP_GRADE_COL].trim();
-                        if (typeof asPerERP === "undefined") break;
-
-                        if (!isSpecialGrade(asPerERP)) {
-                            // Normal graded student → goes into the histogram mark map
-                            markMap.push([cleanID, studentMarks, cleanName]);
-                            console.log(`${cleanID} pushed to normal list`);
-                        } else {
-                            // Special grade student — listed separately for review
-                            specialGradeMap.push([cleanID, asPerERP, cleanName, studentMarks]);
-                            console.log(`${cleanID} pushed to special grades (${asPerERP})`);
-                        }
-                        break;
-                    }
-                }
-
-                if (!studentFound) {
-                    // Student in ERP but not in the pasted marks. The ERP list is the master
-                    // list: withdrawn (W) students keep marks 0; everyone else is collected
-                    // so the instructor is asked for their marks before the histogram opens.
-                    const asPerERP = csvDEStxt[j][ERP_GRADE_COL].trim();
-                    console.log(`Student ${cleanID} not found in pasted marks data`);
-                    if (asPerERP === "W") specialGradeMap.push([cleanID, asPerERP, cleanName, 0]);
-                    else                  missingStudents.push({ id: cleanID, name: cleanName, erpGrade: asPerERP });
-                }
+            // Pasted marks by student (pasted duplicates were refused above)
+            const pastedMarks = new Map();
+            for (let i = chosenStartRow; i < csvSRCtxt.length; i++) {
+                const id = csvSRCtxt[i][chosenIDIdx];   // column 0 = ID
+                if (typeof id === "undefined" || id.trim() === "") continue;
+                pastedMarks.set(idMatchKey(id), parseInt(csvSRCtxt[i][chosenMarksIdx], 10));   // column 1 = marks
             }
+
+            // Every ERP student once (all ERP files combined), stored with the ERP's ID and
+            // name; the ERP grade (non-letter on any row wins) decides where they go
+            erpUnion.students.forEach(st => {
+                const key = idMatchKey(st.id);
+                if (pastedMarks.has(key)) {
+                    const studentMarks = pastedMarks.get(key);
+                    if (!isSpecialGrade(st.grade)) markMap.push([st.id, studentMarks, st.name]);
+                    else                           specialGradeMap.push([st.id, st.grade, st.name, studentMarks]);
+                } else if (st.grade === "W") {
+                    // In ERP, not in the pasted marks: withdrawn students keep marks 0;
+                    specialGradeMap.push([st.id, st.grade, st.name, 0]);
+                } else {
+                    // everyone else is asked for their marks before the histogram opens
+                    missingStudents.push({ id: st.id, name: st.name, erpGrade: st.grade });
+                }
+            });
             // Pasted students who are not in the ERP list are ignored.
 
             // Continue once every ERP student has marks (asks for the missing ones first)
@@ -747,7 +858,8 @@
                     subjectName: subjectNameTxt,
                     fullMarks:   subjectMarksVal,
                     mMap:        markMap,
-                    retCSV:      csvDEStxt,
+                    retCSV:      erpFiles[0].rows,          // first ERP file (older pages read only this)
+                    erpFiles:    erpFiles.map(f => ({ name: f.name, csv: f.rows })),
                     specialG:    specialGrades,
                     specialGMap: specialGradeMap,
                     keepG:       keepGrades,
