@@ -133,6 +133,7 @@
         <tr><td><b>CS F213</b><br>Object Oriented Programming</td><td><a href="sample_marks_files/CS_F213_300students_max300.csv" download>CS_<wbr>F213_<wbr>300students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H5909_CS_F213_7513_MIDSEM.csv" download>H5909_<wbr>CS_<wbr>F213_<wbr>7513_<wbr>MIDSEM.csv</a></td><td>300</td><td>300</td><td>8</td><td>4</td><td>Large class.</td></tr>
         <tr><td><b>MATH F111</b><br>Mathematics I</td><td><a href="sample_marks_files/MATH_F111_500students_max300.csv" download>MATH_<wbr>F111_<wbr>500students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H4827_MATH_F111_6784_MIDSEM.csv" download>H4827_<wbr>MATH_<wbr>F111_<wbr>6784_<wbr>MIDSEM.csv</a></td><td>500</td><td>300</td><td>12</td><td>8</td><td>First-year course.</td></tr>
         <tr><td><b>CS F101</b><br>Computer Programming</td><td><a href="sample_marks_files/CS_F101_750students_max300.csv" download>CS_<wbr>F101_<wbr>750students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H3391_CS_F101_4021_MIDSEM.csv" download>H3391_<wbr>CS_<wbr>F101_<wbr>4021_<wbr>MIDSEM.csv</a></td><td>750</td><td>300</td><td>14</td><td>2</td><td>Has a transfer student with ID ending in <b>GH</b> (<code>2025A7PS1196GH</code>). Try the <a href="#nc-calculator">NC Calculator</a>: 2 students are below 40% of the median, 3 below 30% of the top-3 average.</td></tr>
+        <tr><td><b>BITS F464 + CS U464</b><br>Machine Learning (two ERP files)</td><td><a href="sample_marks_files/BITS_F464_CS_U464_63students_max200.csv" download>BITS_<wbr>F464_<wbr>CS_<wbr>U464_<wbr>63students_<wbr>max200.csv</a></td><td><a href="sample_erp_files/H2741_BITS_F464_5512_MIDSEM.csv" download>H2741_<wbr>BITS_<wbr>F464_<wbr>5512_<wbr>MIDSEM.csv</a> (UG, 60)<br><a href="sample_erp_files/H2741_CS_U464_6630_MIDSEM.csv" download>H2741_<wbr>CS_<wbr>U464_<wbr>6630_<wbr>MIDSEM.csv</a> (PhD, 3)</td><td>63</td><td>200</td><td>2</td><td>0</td><td>Practise <a href="#multi-erp">several ERP files</a>: tick the box and select both ERP files together. Each PhD student is listed twice in the PhD file (two class numbers, as ERP does). <code>2025PHXF0042H</code> (PhD) and <code>2025A7PS0042H</code> (UG) are different students. One PhD student's name differs between his two rows, so a warning is shown.</td></tr>
         <tr><td><b>CHEM F111</b><br>General Chemistry</td><td><a href="sample_marks_files/CHEM_F111_800students_max300.csv" download>CHEM_<wbr>F111_<wbr>800students_<wbr>max300.csv</a></td><td><a href="sample_erp_files/H8107_CHEM_F111_1502_MIDSEM.csv" download>H8107_<wbr>CHEM_<wbr>F111_<wbr>1502_<wbr>MIDSEM.csv</a></td><td>800</td><td>300</td><td>15</td><td>12</td><td>Very large first-year course; a saved JSON of it is also below.</td></tr>
     </table>
     </div>
@@ -211,7 +212,8 @@
 <section class="help-section" id="erp-file">
     <h2>The ERP CSV file</h2>
     <p>Download the student list for your course from ERP as a CSV file and choose it in the
-       second upload box. Only <code>.csv</code> files are accepted.</p>
+       second upload box. Only <code>.csv</code> files are accepted. A course with more than one ERP file
+       is described below under <a href="#multi-erp">Several ERP files for one course</a>.</p>
     <p class="warning"><b>Do not rename the ERP file.</b> The course code is read from the file name.
        For example, <code>H0827_CS_F213_1159_MIDSEM.csv</code> gives the course code <b>CS F213</b>
        (the 2nd and 3rd parts of the name, separated by underscores).</p>
@@ -224,11 +226,39 @@
         <tr><td>8th</td><td>Grade</td><td>Read on load (non-letter grades such as W); filled in on export</td></tr>
     </table>
     <p>Other columns are kept as they are and written back unchanged.</p>
-    <h3>Duplicate students in the ERP file</h3>
-    <p>When the ERP file is submitted, it is checked for students listed more than once (same year, roll number
-       and campus letter). Such a file is rejected with a message naming the student(s) and the line numbers in
-       the file, because grades are written back by ID and a duplicate would make the result ambiguous. Download
-       a fresh copy from ERP, or delete the extra lines (without renaming the file), and submit it again.</p>
+    <h3>Students listed more than once</h3>
+    <p>ERP sometimes lists a student on more than one row (for example under two class numbers). That is fine:
+       the student is counted once in the histogram, and on export the same marks and grade are written into
+       every one of their rows. Rows are never added to or removed from an ERP file. Rows count as the same
+       student by the usual <a href="#matching">matching rule</a>.</p>
+    <p>If the rows of one student disagree (a different name, a different form of the ID, or a non-letter grade
+       such as W on one row but not the other), a <b>warning</b> lists them with the file and line numbers, and
+       the system continues with the first row's ID and name and the non-letter grade. A different letter grade
+       already in ERP is not a disagreement: it is overwritten on export.</p>
+</section>
+
+<section class="help-section" id="multi-erp">
+    <h2>Several ERP files for one course</h2>
+    <p>One course can come from ERP as several files, for example when a course code changes, or when UG and PhD
+       students have different codes for the same course (<code>H0827_BITS_F459_…</code> and
+       <code>H0827_CS_U459_…</code>). They are graded together, on one histogram.</p>
+    <ol>
+        <li>Paste the marks of <b>all</b> the students (from every file) in one paste.</li>
+        <li>Tick <b>This course has more than one ERP file</b> above the ERP upload box, click <b>Choose files</b> and
+            select all the ERP files together (hold <kbd>Ctrl</kbd>, or <kbd>Cmd</kbd> on a Mac). Do not rename them.
+            Then click Submit.</li>
+        <li>All the files are combined into one list of students, each student once. The status line says how many
+            students and repeated rows were found, and warns about rows that disagree.</li>
+        <li>A <b>Name (from ERP)</b> column appears in the preview table: every pasted student's ERP name, or
+            “not in ERP, will be ignored” for a pasted student in none of the files.</li>
+        <li>The course code is made from all the file names, for example <b>BITS F459 + CS U459</b>; change it with
+            the pencil button on the histogram page if you like.</li>
+    </ol>
+    <p>Everything after that works as for one file. <b>Save Grades</b> keeps all the ERP files in the JSON.
+       <b>Save ERP CSV → Export Directly</b> downloads one file per ERP file (your browser may ask once whether the
+       site may download several files), and <b>Sort by Branch/Campus</b> has a drop-down to choose which ERP file
+       to sort and download.</p>
+    <p>The Name column is shown with a single ERP file too.</p>
 </section>
 
 <section class="help-section" id="matching">
@@ -426,16 +456,19 @@
 <section class="help-section" id="saving">
     <h2>Saving and exporting</h2>
     <h3>Save Grades (JSON backup)</h3>
-    <p>Downloads a JSON file with everything needed to continue: marks, ERP list, cutoffs, non-letter grades
+    <p>Downloads a JSON file with everything needed to continue: marks, the ERP file(s), cutoffs, non-letter grades
        and title. Open it later with <b>View Grades</b> on the home page. Save one before making changes you
        might want to go back on.</p>
     <h3>Save ERP CSV</h3>
     <ul>
-        <li><b>Export Directly</b>: fills each student's marks and grade into the ERP file and downloads it
-            with its original name (a preview also opens in a new tab). If an ERP student cannot be found in
+        <li><b>Export Directly</b>: fills each student's marks and grade into the ERP file(s) and downloads each
+            file with its original name followed by <code>_CSV_saved_</code> and the date and time, for example
+            <code>H0827_CS_F213_1159_MIDSEM_CSV_saved_4-11-2026-12-40-3.csv</code> (a preview of all of them also
+            opens in a new tab). If an ERP student cannot be found in
             either list, you are warned and they are marked W with 0 marks; fix that row by hand.</li>
         <li><b>Sort by Branch/Campus</b>: opens a page where the students can be ordered by campus, by branch,
-            or by both, before downloading. Campus and branch are read from the student ID and shown for
+            or by both, before downloading (with the same kind of date-time name). With several ERP files, a
+            drop-down at the top chooses which file is shown and downloaded. Campus and branch are read from the student ID and shown for
             reference only; the downloaded file has just the ERP columns.</li>
     </ul>
     <h3>Print PDF</h3>
@@ -493,9 +526,12 @@
         <dt>“student(s) appear on more than one pasted row”</dt>
         <dd>The same student (same year, roll number and campus letter) is on two or more of the red rows. Keep one
             row per student in your sheet, paste again and choose the starting row.</dd>
-        <dt>“The ERP file … lists student(s) more than once”</dt>
-        <dd>The ERP file has the same student on more than one line. Download it again from ERP, or remove the
-            extra lines without renaming the file.</dd>
+        <dt>“… student(s) appear on more than one ERP row with different details”</dt>
+        <dd>A warning only: ERP lists a student on several rows that disagree (see
+            <a href="#erp-file">Students listed more than once</a>). Check the students named; the system continues.</dd>
+        <dt>A pasted student shows “not in ERP, will be ignored”</dt>
+        <dd>That ID is in none of the ERP files submitted. If the student belongs to the course, check the ID, or
+            whether an ERP file is missing (tick the box for several ERP files and select all of them).</dd>
         <dt>View Grades says the file lists students more than once, or is not valid</dt>
         <dd>The JSON file is damaged or was edited by hand. Use another saved copy (for example an
             <code>AUTO_BACKUP_</code> file), or create the grades again with New Grade.</dd>
