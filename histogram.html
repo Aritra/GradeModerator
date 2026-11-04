@@ -286,8 +286,13 @@
         #pdfModal .pdf-dialog  { width: 95vw; max-width: 95vw; height: 95vh; margin: 2.5vh auto; }
         #pdfModal .pdf-content { height: 100%; }
         #pdfModal .pdf-body    { display: flex; flex-direction: column; gap: .75rem; min-height: 0; }
-        #pdfPreview            { flex: 1 1 auto; width: 100%; min-height: 0; border: 1px solid #bbb;
-                                 background: #525659; }
+        #pdfModal .pdf-preview-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+        #pdfPreview            { width: 100%; height: 100%; border: 1px solid #bbb; background: #525659; }
+        #pdfModal .pdf-loading { position: absolute; inset: 0; display: none; flex-direction: column; gap: .75rem;
+                                 align-items: center; justify-content: center; color: #fff;
+                                 background: rgba(40, 40, 40, .55); font-weight: bold; }
+        #pdfModal .pdf-loading.show { display: flex; }
+        #pdfModal .pdf-loading .spinner-border { width: 3rem; height: 3rem; }
         #pdfModal .pdf-controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
         #pdfModal .pdf-nc       { flex: 1 1 22rem; }
         #pdfModal .pdf-actions  { display: flex; gap: .5rem; margin-left: auto; }
@@ -656,7 +661,14 @@
                 </div>
                 <div class="modal-body pdf-body">
                     <!-- The PDF itself, in the browser's PDF viewer: exactly the file that is saved -->
-                    <iframe id="pdfPreview" title="PDF preview"></iframe>
+                    <div class="pdf-preview-wrap">
+                        <iframe id="pdfPreview" title="PDF preview"></iframe>
+                        <!-- Shown while the PDF is being made and the preview loads -->
+                        <div id="pdfLoading" class="pdf-loading" role="status">
+                            <div class="spinner-border text-light" aria-hidden="true"></div>
+                            <div>Preparing the PDF…</div>
+                        </div>
+                    </div>
                     <div class="pdf-controls">
                         <div>
                             <div class="small fw-bold mb-1">Design</div>
@@ -1616,8 +1628,12 @@
     const pdfModal    = document.getElementById('pdfModal');
     const pdfPreview  = document.getElementById('pdfPreview');
     const ncCutoffInput = document.getElementById('ncCutoffInput');
+    const pdfLoading    = document.getElementById('pdfLoading');
     let pdfPreviewUrl   = null;
     let pdfPreviewTimer = null;
+    let pdfPreviewToken = 0;      // latest preview request (older ones are skipped)
+    let pdfLoadingTimer = null;
+    pdfPreview.addEventListener('load', () => showPdfLoading(false));
 
     // Page geometry (mm): A4 landscape, 10 mm margins
     const PDF_PAGE  = { w: 297, h: 210, m: 10 };
@@ -1628,7 +1644,7 @@
     const PDF_FONT_PX = 13;                                 // chart text size (canvas px)
 
     // Grade bands: E .. A from red to blue, GRADE_BAND_SHARE of the chart's height
-    const GRADE_BAND_SHARE  = 0.08;
+    const GRADE_BAND_SHARE  = 0.05;
     const GRADE_BAND_COLORS = ['#d7191c', '#f46d43', '#fdae61', '#fee08b',
                                '#abdda4', '#66c2a5', '#3288bd', '#2b4ca8'];
 
@@ -1665,6 +1681,34 @@
      * and the criterion.
      */
     function renderPdfPreview() {
+        const token = ++pdfPreviewToken;
+        showPdfLoading(true);
+        // Building the PDF blocks the page for a moment: let the browser paint the
+        // spinner first, and skip the work if a newer request came in
+        afterPaint(() => { if (token === pdfPreviewToken) buildPdfPreview(); });
+    }
+
+    /**
+     * Run fn once the browser has painted (a timer queued from an animation frame
+     * runs after that frame's paint); the 100 ms timer is a backstop for when no
+     * frame comes (e.g. a background tab).
+     */
+    function afterPaint(fn) {
+        let done = false;
+        const run = () => { if (!done) { done = true; fn(); } };
+        requestAnimationFrame(() => setTimeout(run, 0));
+        setTimeout(run, 100);
+    }
+
+    /** Spinner over the preview: on while the PDF is made; off when the preview has loaded. */
+    function showPdfLoading(on) {
+        pdfLoading.classList.toggle('show', on);
+        clearTimeout(pdfLoadingTimer);
+        // safety net: a browser that never reports the preview as loaded
+        if (on) pdfLoadingTimer = setTimeout(() => showPdfLoading(false), 8000);
+    }
+
+    function buildPdfPreview() {
         if (navigator.pdfViewerEnabled === false) {
             pdfPreview.removeAttribute('src');
             pdfPreview.srcdoc =
@@ -1680,6 +1724,7 @@
         }
         const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
         if (!doc) {
+            showPdfLoading(false);
             pdfPreview.srcdoc = '<p style="font:16px sans-serif;color:#fff;padding:1rem">The PDF library could not ' +
                                 'be loaded. Check the internet connection and reload the page.</p>';
             return;
@@ -1692,10 +1737,14 @@
 
     /** Save PDF: download the PDF, named like the JSON (code + "_PDF_saved_" + date-time). */
     function savePdf() {
-        const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
-        if (!doc) return;
-        doc.save(subjectCode + '_PDF_saved_' + saveStamp() + '.pdf');
-        bootstrap.Modal.getOrCreateInstance(pdfModal).hide();
+        showPdfLoading(true);
+        afterPaint(() => {
+            const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
+            showPdfLoading(false);
+            if (!doc) return;
+            doc.save(subjectCode + '_PDF_saved_' + saveStamp() + '.pdf');
+            bootstrap.Modal.getOrCreateInstance(pdfModal).hide();
+        });
     }
 
     /**
