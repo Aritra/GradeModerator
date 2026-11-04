@@ -204,6 +204,16 @@
        <a href="#matching">How students are matched</a>), so <code>2023A7PS0412H</code> and
        <code>2023B4A70412H</code> are duplicates. PhD IDs (<code>PH</code> after the year) count as the same student only
        when the whole ID is identical, so <code>2026A7PS2000H</code> and <code>2026PHXP2000H</code> are not duplicates.</p>
+    <h3>ERP columns in the preview</h3>
+    <p>Once the ERP file(s) are submitted, two columns are added to the preview table:</p>
+    <ul>
+        <li><b>Name (from ERP)</b>: each pasted student's name from ERP, or “not in ERP, will be ignored” for a
+            pasted student in none of the ERP files.</li>
+        <li><b>Grade (from ERP)</b>: filled in only when ERP already has a <b>non-letter grade</b> for the student
+            (W, I, NC, GA, RC, DP, TGA or RRA); the whole row is then shown in <b>orange with bold dark-blue
+            text</b>. Letter grades already in a filled-in ERP file are not shown, because the export replaces them.
+            A row with an invalid or repeated ID stays light red, since that has to be fixed first.</li>
+    </ul>
     <h3>Coming back with the Back button</h3>
     <p>The New Grade and View Grades pages are cleared every time they are opened, including with the
        browser's Back button, so details from a previous course are never reused by mistake.</p>
@@ -249,8 +259,8 @@
             Then click Submit.</li>
         <li>All the files are combined into one list of students, each student once. The status line says how many
             students and repeated rows were found, and warns about rows that disagree.</li>
-        <li>A <b>Name (from ERP)</b> column appears in the preview table: every pasted student's ERP name, or
-            “not in ERP, will be ignored” for a pasted student in none of the files.</li>
+        <li><b>Name (from ERP)</b> and <b>Grade (from ERP)</b> columns appear in the preview table (see
+            <a href="#marks-input">ERP columns in the preview</a>).</li>
         <li>The course code is made from all the file names, for example <b>BITS F459 + CS U459</b>; change it with
             the pencil button on the histogram page if you like.</li>
     </ol>
@@ -279,19 +289,17 @@
         <li>If the ERP <b>Grade</b> column already holds a <b>non-letter grade</b> (W, I, NC, GA, RC,
             DP, TGA or RRA), the student is <b>not</b> placed in the histogram; they are listed
             separately with that grade.</li>
-        <li>If the student is <b>missing from your marks</b>:
-            <ul>
-                <li>a withdrawn (<b>W</b>) student is listed separately with marks 0, as usual;</li>
-                <li>for anyone else, a <b>Students missing from your marks</b> window opens when you click
-                    Show Histogram, listing their ID, name and ERP grade with a box for their marks. Enter a
-                    mark (0 to the maximum; decimals are rounded up) for every student and click
-                    <b>Continue</b>, or click <b>Cancel</b> and fix the pasted marks. The entered marks are then
-                    used exactly as if they had been pasted.</li>
-            </ul></li>
+        <li>If the student is <b>missing from your marks</b> (withdrawn <b>W</b> students too: include them in
+            your paste), a <b>Students missing from your marks</b> window opens when you click Show Histogram,
+            listing their ID, name and ERP grade with a box for their marks. Enter a mark (0 to the maximum;
+            decimals are rounded up) for every student and click <b>Continue</b>, or click <b>Cancel</b> and fix
+            the pasted marks. The entered marks are then used exactly as if they had been pasted; W students keep
+            their W grade.</li>
         <li>Everyone else is <b>letter-graded</b> and appears in the histogram.</li>
     </ul>
     <p>If any students are listed separately, a <b>Special Grades Found</b> window shows them before the
-       histogram opens. The <b>ERP file is the master list</b>: students who are in your marks but <b>not</b> in
+       histogram opens, as a final check: the ERP CSV already has these non-letter grades, and their marks are
+       saved and written back on export, so nothing needs to be changed by hand. Click OK to continue. The <b>ERP file is the master list</b>: students who are in your marks but <b>not</b> in
        the ERP file are simply ignored.</p>
 </section>
 

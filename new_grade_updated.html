@@ -24,6 +24,8 @@
         #pastePreview td.paste-rownum { color: #6c757d; width: 4em; text-align: right; }
         #pastePreview tr.paste-header > td { background-color: #0a1f66; color: #fff; font-weight: bold; }
         #pastePreview tr.paste-data   > td { background-color: #fff9c4; }
+        /* Student whose ERP grade is non-letter (W, I, NC, ...): orange, bold deep blue */
+        #pastePreview tr.paste-nonletter > td { background-color: #ffa94d; color: #0a1f66; font-weight: bold; }
         #pastePreview tr.paste-bad    > td { background-color: #f8d7da; }
         /* Name column, filled from the ERP file(s) once they are submitted */
         #pastePreview tr.paste-data > td.paste-noerp { color: #8a5a00; font-style: italic; }
@@ -434,33 +436,51 @@
                 tr.classList.toggle('paste-data',   chosenStartRow >= 0 && i >= chosenStartRow);
                 tr.classList.toggle('paste-bad',    badIds.has(i));
             });
-            updatePreviewNames();
+            updatePreviewErpColumns();
         }
 
         /**
-         * Once the ERP file(s) are loaded, add a Name column to the preview: the ERP
-         * name of each pasted student (matched with idMatchKey), or "not in ERP, will
-         * be ignored" (the ERP files are the master list). The column title goes on
-         * the last header row. Without ERP data the column is removed.
+         * Once the ERP file(s) are loaded, add two columns to the preview for each
+         * pasted student (matched with idMatchKey):
+         *   Name  - the ERP name, or "not in ERP, will be ignored" (the ERP files are
+         *           the master list);
+         *   Grade - the ERP grade if it is non-letter (W, I, NC, ...; with several
+         *           files, non-letter on any row), and the row turns orange. Letter
+         *           grades already in a filled-in ERP file are not shown: export
+         *           overwrites them.
+         * The column titles go on the last header row. Without ERP data the columns
+         * are removed.
          */
-        function updatePreviewNames() {
+        function updatePreviewErpColumns() {
             Array.from(pastePreviewBody.rows).forEach((tr, i) => {
-                let td = tr.querySelector('td.paste-name');
-                if (!erpUnion) { if (td) td.remove(); return; }
-                if (!td) {
-                    td = document.createElement('td');
-                    td.className = 'paste-name';
-                    tr.appendChild(td);
+                let tdName  = tr.querySelector('td.paste-name');
+                let tdGrade = tr.querySelector('td.paste-grade');
+                tr.classList.remove('paste-nonletter');
+                if (!erpUnion) {
+                    if (tdName)  tdName.remove();
+                    if (tdGrade) tdGrade.remove();
+                    return;
                 }
-                td.classList.remove('paste-noerp');
+                if (!tdName) {
+                    tdName  = document.createElement('td');
+                    tdName.className  = 'paste-name';
+                    tdGrade = document.createElement('td');
+                    tdGrade.className = 'paste-grade';
+                    tr.append(tdName, tdGrade);
+                }
+                tdName.classList.remove('paste-noerp');
                 if (chosenStartRow < 0 || i < chosenStartRow) {
-                    td.textContent = (i === chosenStartRow - 1) ? 'Name (from ERP)' : '';
+                    const titleRow = (i === chosenStartRow - 1);
+                    tdName.textContent  = titleRow ? 'Name (from ERP)'  : '';
+                    tdGrade.textContent = titleRow ? 'Grade (from ERP)' : '';
                     return;
                 }
                 const id = (csvSRCtxt[i] && csvSRCtxt[i][0] || '').trim();
                 const st = id ? erpUnion.byKey.get(idMatchKey(id)) : null;
-                td.textContent = st ? st.name : (id ? 'not in ERP, will be ignored' : '');
-                if (id && !st) td.classList.add('paste-noerp');
+                tdName.textContent  = st ? st.name : (id ? 'not in ERP, will be ignored' : '');
+                tdGrade.textContent = (st && isSpecialGrade(st.grade)) ? st.grade : '';
+                if (id && !st) tdName.classList.add('paste-noerp');
+                tr.classList.toggle('paste-nonletter', !!st && isSpecialGrade(st.grade));
             });
         }
 
@@ -735,7 +755,7 @@
             demo.innerHTML += `<br>📂 ERP file(s) loaded: ${loaded.map(f => escapeHtml(f.name)).join(', ')}: ` +
                 `${union.students.length} student(s)` +
                 (rowCount > union.students.length ? ` (${rowCount - union.students.length} repeated row(s) counted once)` : '') +
-                `. The names are shown in the table above. Ready to show histogram.`;
+                `. Their names and non-letter grades are shown in the table above. Ready to show histogram.`;
             const noName = union.students.filter(st => st.name === '');
             if (noName.length > 0) {
                 demo.innerHTML += `<br><span class="erp-warn">⚠️ ${noName.length} ERP student(s) have no name: ` +
@@ -837,11 +857,9 @@
                     const studentMarks = pastedMarks.get(key);
                     if (!isSpecialGrade(st.grade)) markMap.push([st.id, studentMarks, st.name]);
                     else                           specialGradeMap.push([st.id, st.grade, st.name, studentMarks]);
-                } else if (st.grade === "W") {
-                    // In ERP, not in the pasted marks: withdrawn students keep marks 0;
-                    specialGradeMap.push([st.id, st.grade, st.name, 0]);
                 } else {
-                    // everyone else is asked for their marks before the histogram opens
+                    // In ERP, not in the pasted marks (W students too: they belong in the
+                    // paste): asked for their marks before the histogram opens
                     missingStudents.push({ id: st.id, name: st.name, erpGrade: st.grade });
                 }
             });
@@ -892,7 +910,7 @@
         }
 
         /**
-         * Ask for the marks of ERP students missing from the pasted list (W excluded).
+         * Ask for the marks of ERP students missing from the pasted list (W students too).
          * Every box must hold a number from 0 to maxMarks; decimals are rounded up like
          * pasted marks. Continue calls onDone([{id, name, erpGrade, marks}, ...]);
          * Cancel closes the window so the pasted data can be fixed instead.
@@ -924,7 +942,8 @@
                   <div class="modal-body">
                     <p>The ERP file is the master list. These students are in the ERP file but not in the
                        marks you pasted. Enter their marks (0 to ${maxMarks}) to continue, or click Cancel
-                       and fix the pasted marks. Withdrawn (W) students are not asked.</p>
+                       and fix the pasted marks. Withdrawn (W) students are asked too (0 is allowed); they keep
+                       their W grade.</p>
                     <div class="table-responsive">
                       <table class="table table-bordered table-sm align-middle">
                         <thead><tr><th>Student ID</th><th>Name</th><th>ERP grade</th><th style="width:9rem">Marks</th></tr></thead>
@@ -992,8 +1011,8 @@
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title" id="specialGradesModalLabel">Special Grades Found</h5>
-                        <h6 class="modal-title">
-                            For these students, update marks manually in the ERP CSV if needed.
+                        <h6 class="modal-title ms-3">
+                            The ERP CSV already has these non-letter grades (for your information).
                         </h6>
                         <button type="button" class="btn-close"
                                 data-bs-dismiss="modal" aria-label="Close"></button>

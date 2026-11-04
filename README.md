@@ -73,7 +73,7 @@ Also works on:
 ## 💡 Tips for First-Time Users
 
 - 💾 Always save a JSON backup
-- 📋 The ERP file is the master list: if a student in it (other than W) is missing from your pasted marks, you are asked for their marks before the histogram opens; extra pasted students are ignored
+- 📋 The ERP file is the master list: if a student in it (W students too) is missing from your pasted marks, you are asked for their marks before the histogram opens. After the ERP file(s) are loaded, the preview shows each student's ERP name and any non-letter ERP grade (such rows are orange); extra pasted students are ignored
 - 🔠 Pasted IDs are converted to capital letters and checked against the BITS ID format (e.g. `2023A7PS0412H`) before the histogram opens
 - 🔄 The New Grade and View Grades pages are cleared when you come back to them (including with the browser's Back button)
 - 🆔 Students are matched between your marks and the ERP file on **year + roll number + campus** (e.g. `2023`, `0412`, `H` in `2023A7PS0412H`); the programme code (`A7PS`, `B4A7`, …) is ignored, except for PhD IDs with `PH` after the year (e.g. `2026PHXP2000H`), which must match in full because a PhD candidate can share year, roll number and campus with a first-degree student
