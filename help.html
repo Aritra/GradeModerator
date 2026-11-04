@@ -289,12 +289,14 @@
         <li>If the ERP <b>Grade</b> column already holds a <b>non-letter grade</b> (W, I, NC, GA, RC,
             DP, TGA or RRA), the student is <b>not</b> placed in the histogram; they are listed
             separately with that grade.</li>
-        <li>If the student is <b>missing from your marks</b> (withdrawn <b>W</b> students too: include them in
-            your paste), a <b>Students missing from your marks</b> window opens when you click Show Histogram,
-            listing their ID, name and ERP grade with a box for their marks. Enter a mark (0 to the maximum;
-            decimals are rounded up) for every student and click <b>Continue</b>, or click <b>Cancel</b> and fix
-            the pasted marks. The entered marks are then used exactly as if they had been pasted; W students keep
-            their W grade.</li>
+        <li>Withdrawn (<b>W</b>) students: paste them with the others. A W student's pasted marks are kept (and
+            written back on export); a W student who is missing from your marks simply gets marks 0, without
+            asking.</li>
+        <li>If any other student is <b>missing from your marks</b>, a <b>Students missing from your marks</b>
+            window opens when you click Show Histogram, listing their ID, name and ERP grade with a box for their
+            marks. Enter a mark (0 to the maximum; decimals are rounded up) for every student and click
+            <b>Continue</b>, or click <b>Cancel</b> and fix the pasted marks. The entered marks are then used exactly
+            as if they had been pasted.</li>
         <li>Everyone else is <b>letter-graded</b> and appears in the histogram.</li>
     </ul>
     <p>If any students are listed separately, a <b>Special Grades Found</b> window shows them before the

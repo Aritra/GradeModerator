@@ -857,9 +857,12 @@
                     const studentMarks = pastedMarks.get(key);
                     if (!isSpecialGrade(st.grade)) markMap.push([st.id, studentMarks, st.name]);
                     else                           specialGradeMap.push([st.id, st.grade, st.name, studentMarks]);
+                } else if (st.grade === "W") {
+                    // In ERP, not in the pasted marks: withdrawn students get marks 0 without
+                    // asking (a pasted W student keeps the pasted marks, above);
+                    specialGradeMap.push([st.id, st.grade, st.name, 0]);
                 } else {
-                    // In ERP, not in the pasted marks (W students too: they belong in the
-                    // paste): asked for their marks before the histogram opens
+                    // everyone else is asked for their marks before the histogram opens
                     missingStudents.push({ id: st.id, name: st.name, erpGrade: st.grade });
                 }
             });
@@ -910,7 +913,7 @@
         }
 
         /**
-         * Ask for the marks of ERP students missing from the pasted list (W students too).
+         * Ask for the marks of ERP students missing from the pasted list (W excluded: they get 0).
          * Every box must hold a number from 0 to maxMarks; decimals are rounded up like
          * pasted marks. Continue calls onDone([{id, name, erpGrade, marks}, ...]);
          * Cancel closes the window so the pasted data can be fixed instead.
@@ -942,8 +945,8 @@
                   <div class="modal-body">
                     <p>The ERP file is the master list. These students are in the ERP file but not in the
                        marks you pasted. Enter their marks (0 to ${maxMarks}) to continue, or click Cancel
-                       and fix the pasted marks. Withdrawn (W) students are asked too (0 is allowed); they keep
-                       their W grade.</p>
+                       and fix the pasted marks. Withdrawn (W) students are not asked: if they are not in
+                       your marks, they get 0.</p>
                     <div class="table-responsive">
                       <table class="table table-bordered table-sm align-middle">
                         <thead><tr><th>Student ID</th><th>Name</th><th>ERP grade</th><th style="width:9rem">Marks</th></tr></thead>
