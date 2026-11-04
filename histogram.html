@@ -183,7 +183,7 @@
         @media print {
             .overlayDiv,
             .modal-backdrop,
-            #myModal,
+            #barListModal,
             #pdfModal,
             #ncCalcModal,
             #ncApplyModal,
@@ -215,26 +215,15 @@
             text-align: center;
         }
 
-        /* Bar-click student-list modal — scoped to #myModal so Bootstrap modals are unaffected */
-        #myModal { display: none; position: fixed; z-index: 1050; padding-top: 6rem;
-                   left: 0; top: 0; width: 100%; height: 100%;
-                   overflow: auto; background-color: rgba(0,0,0,0.4); }
-        #myModal .modal-content {
-            position: relative; background-color: #fefefe;
-            margin: auto; padding: 0; border: 1px solid #888; width: 80%;
-            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
-            animation-name: animatetop; animation-duration: 0.4s;
-        }
-        @keyframes animatetop {
-            from { top: -300px; opacity: 0; }
-            to   { top: 0;      opacity: 1; }
-        }
-        #myModal .close { color: white; float: right; font-size: 1.75rem; font-weight: bold; }
-        #myModal .close:hover, #myModal .close:focus { color: #000; text-decoration: none; cursor: pointer; }
-        #myModal .modal-header { padding: 10px 16px; background-color: #5cb85c; color: white; }
-        #myModal .modal-body   { padding: 10px 16px; }
-        #myModal .modal-footer { padding: 10px 16px; background-color: #5cb85c;
-                                 align-items: left; color: white; }
+        /* Histogram column popup (shares #gradeTip): "and N more" line */
+        #gradeTip .tip-more { margin-top: .3rem; font-style: italic; color: #000080; }
+        /* Full list of the students with one mark (more than TIP_MAX_STUDENTS): wide, in columns, scrolls */
+        #barListModal .modal-header { background: #000080; color: #fff; }
+        #barListModal .bar-list { column-count: 3; column-gap: 2.5rem; margin: 0; padding-left: 2.25rem;
+                                  font-size: .9rem; line-height: 1.6; }
+        #barListModal .bar-list li { break-inside: avoid; }
+        @media (max-width: 900px) { #barListModal .bar-list { column-count: 2; } }
+        @media (max-width: 560px) { #barListModal .bar-list { column-count: 1; } }
 
         /* Student search table */
         * { box-sizing: border-box; }
@@ -425,21 +414,15 @@
         </div>
     </div>
 
-    <!-- ── Bar-click student list modal ─────────────────────────────────────── -->
-    <div id="myModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="row"></div>
-                <div class="col-sm-10" style="padding-left: 30px;">
-                    <h3 id="headerMyModal"></h3>
+    <!-- ── All students with one mark (more than 25): opened from the histogram ─── -->
+    <div class="modal fade" id="barListModal" tabindex="-1" aria-labelledby="barListLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="barListLabel"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="col-sm-2"><span class="close">X</span></div>
-            </div>
-            <div class="modal-body">
-                <p id="pInMyModal"></p>
-            </div>
-            <div class="modal-footer">
-                <h4 id="footerMyModal"></h4>
+                <div class="modal-body"><ol id="barListBody" class="bar-list"></ol></div>
             </div>
         </div>
     </div>
@@ -797,10 +780,6 @@
     const keepGradeDiv     = document.getElementById("keepGradeDiv");
     const specialGradeDiv  = document.getElementById("overlaySG");
     const gradeAnalyticsDiv= document.getElementById("overlayGA");
-    const modal            = document.getElementById("myModal");
-    const modalP           = document.getElementById("pInMyModal");
-    const modalHeader      = document.getElementById("headerMyModal");
-    const modalFooter      = document.getElementById("footerMyModal");
     const gaToggleButton   = document.getElementById('toggleChartButton');
     const gaGraphCanvas    = document.getElementById('chartContainer');
     const gaTopLabel       = document.getElementById('gradeAnalyticsTopLabel');
@@ -905,10 +884,6 @@
     // ── Initial display state (per AUGSD request) ─────────────────────────────────
     // display (not visibility) so the hidden row takes no space in the auto-height top panel
     keepGradeDiv.style.display      = 'none';
-
-    // ── Modal close handlers ──────────────────────────────────────────────────────
-    document.getElementsByClassName("close")[0].onclick = () => { modal.style.display = "none"; };
-    window.onclick = (event) => { if (event.target === modal) modal.style.display = "none"; };
 
     // =============================================================================
     // GRADE UTILITY FUNCTIONS
@@ -1015,7 +990,8 @@
             options: {
                 legend:    { display: false },
                 animation: false,
-                events:    enableClick ? ['click'] : [],
+                // Pointer handling is ours (histogram column popup), not Chart.js's
+                events:    [],
                 plugins:   { tooltip: { enabled: false } },
                 layout:    { padding: { top: bubbleHeadroomPx() } },
                 // precision 0: student counts are whole numbers, so no 0.2-step ticks on small classes
@@ -1030,16 +1006,8 @@
             lineAtIndex: tempLineIndx,
         });
 
-        // Attach bar-click handler once — closure over mainChart stays valid
-        // because we never replace the instance after first creation.
-        if (enableClick) {
-            myCanvas.onclick = (evt) => {
-                const res = mainChart.getElementsAtEventForMode(
-                    evt, 'nearest', { intersect: true }, true
-                );
-                if (res.length > 0) showModal(res[0]._index);
-            };
-        }
+        // Attach the column popup handlers once (the chart instance is never replaced)
+        if (enableClick) attachHistogramTip();
     }
 
     /**
@@ -1137,22 +1105,6 @@
                 rows[i].style.display = match ? "" : "none";
             }
         }
-    }
-
-    /** Show the student modal when a histogram bar is clicked. */
-    function showModal(clickedIdx) {
-        const students    = marksForHistogram[clickedIdx][2];
-        const marksClicked= clickedIdx + markLowest;
-
-        modalP.innerHTML  = students.map(s => s + "<br>").join('');
-        modalHeader.innerHTML = "List of students having marks: " + marksClicked;
-
-        const grade = getGradeFromMarks(marksClicked);
-        modalFooter.innerHTML = grade
-            ? "They currently have grade: " + grade
-            : "No grade is assigned for this mark range.";
-
-        modal.style.display = "block";
     }
 
     /**
@@ -2217,6 +2169,101 @@
     }
     attachGradeTip(letterTable,    mgpvTipHtml);
     attachGradeTip(nonLetterTable, nonLetterTipHtml);
+
+    // ── Histogram column popup ────────────────────────────────────────────────────
+    // Hovering a mark's column (anywhere in it, so 1-student bars are easy to hit)
+    // shows the shared popup: the mark, its current grade, and the students with it
+    // (first TIP_MAX_STUDENTS). With more students, a click (or a second tap on a
+    // touch screen) opens #barListModal with all of them. A tap shows the popup
+    // until the next tap elsewhere.
+    const barListModal = document.getElementById('barListModal');
+    let barTipIdx      = -1;     // column whose popup is shown (-1: none)
+    let lastPointer    = 'mouse';
+
+    /** Histogram column (bar index) under the pointer, or -1 outside the plot / no chart. */
+    function histColumnAt(evt) {
+        if (!mainChart || xvalues.length === 0) return -1;
+        // pointer -> chart px through #gradeBubbleArea, laid out like the canvas content box
+        const area = bubbleArea.getBoundingClientRect();
+        const x = (evt.clientX - area.left) / area.width  * mainChart.width;
+        const y = (evt.clientY - area.top)  / area.height * mainChart.height;
+        const ca = mainChart.chartArea;
+        if (x < ca.left || x > ca.right || y < ca.top || y > mainChart.scales['x-axis-0'].bottom) return -1;
+        const data = mainChart.getDatasetMeta(0).data;
+        const slot = data.length > 1 ? data[1]._model.x - data[0]._model.x : 1;
+        const i = Math.round((x - data[0]._model.x) / slot);
+        return Math.max(0, Math.min(data.length - 1, i));
+    }
+
+    /** Students at column i as [id, name] (stored as "ID : Name"). */
+    function columnStudents(i) {
+        return marksForHistogram[i][2].map(s => {
+            const k = s.indexOf(' : ');
+            return k < 0 ? [s, ''] : [s.slice(0, k), s.slice(k + 3)];
+        });
+    }
+
+    function markGradeLabel(mark) {
+        const grade = getGradeFromMarks(mark);
+        return `${mark} marks · ${grade ? 'Grade ' + grade : 'no grade'}`;
+    }
+
+    function barTipHtml(i) {
+        const mark = i + markLowest;
+        const st   = columnStudents(i);
+        const rows = st.slice(0, TIP_MAX_STUDENTS)
+            .map(([id, name]) => `<tr><td>${escapeHtml(id)}</td><td>${escapeHtml(name)}</td></tr>`).join('');
+        return `<div class="tip-title">${markGradeLabel(mark)}</div>` +
+               `<div>${st.length} student${st.length === 1 ? '' : 's'}</div><table>${rows}</table>` +
+               (st.length > TIP_MAX_STUDENTS
+                   ? `<div class="tip-more">… and ${st.length - TIP_MAX_STUDENTS} more: click to see all</div>` : '');
+    }
+
+    /** Show the popup for column i (hidden for an empty column or outside the plot). */
+    function showBarTip(i, evt) {
+        if (i < 0 || marksForHistogram[i][1] === 0) { hideBarTip(); return; }
+        if (i !== barTipIdx) gradeTip.innerHTML = barTipHtml(i);
+        barTipIdx = i;
+        gradeTip.style.display = 'block';
+        placeGradeTip(evt);
+    }
+
+    function hideBarTip() {
+        if (barTipIdx < 0) return;
+        barTipIdx = -1;
+        gradeTip.style.display = 'none';
+    }
+
+    /** All students with the mark of column i, in a wide window (columns, scrolls). */
+    function openBarList(i) {
+        const st = columnStudents(i);
+        document.getElementById('barListLabel').textContent =
+            `${markGradeLabel(i + markLowest)} · ${st.length} students`;
+        document.getElementById('barListBody').innerHTML = st
+            .map(([id, name]) => `<li><b>${escapeHtml(id)}</b> ${escapeHtml(name)}</li>`).join('');
+        hideBarTip();
+        bootstrap.Modal.getOrCreateInstance(barListModal).show();
+    }
+
+    function attachHistogramTip() {
+        myCanvas.addEventListener('pointerdown', (evt) => { lastPointer = evt.pointerType; });
+        myCanvas.addEventListener('mousemove', (evt) => {
+            if (lastPointer === 'touch') return;          // touch: popups come from taps
+            showBarTip(histColumnAt(evt), evt);
+        });
+        myCanvas.addEventListener('mouseleave', () => { if (lastPointer !== 'touch') hideBarTip(); });
+        myCanvas.addEventListener('click', (evt) => {
+            const i = histColumnAt(evt);
+            if (i < 0 || marksForHistogram[i][1] === 0) { hideBarTip(); return; }
+            const many = marksForHistogram[i][1] > TIP_MAX_STUDENTS;
+            if (lastPointer === 'touch' && barTipIdx !== i) { showBarTip(i, evt); return; }   // first tap: popup
+            if (many) openBarList(i);                     // click, or second tap on the same column
+        });
+        // A tap anywhere else closes a tapped popup
+        document.addEventListener('pointerdown', (evt) => {
+            if (evt.target !== myCanvas) hideBarTip();
+        });
+    }
 
     // ── Draggable grade bubbles ──────────────────────────────────────────────────
     // One "ball on a stick" per grade, sitting on top of its cutoff line.
