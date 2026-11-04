@@ -684,10 +684,15 @@
                         <div class="pdf-nc">
                             <label for="ncCutoffInput" class="small fw-bold mb-1">NC cutoff and criterion
                                 (printed below the chart)</label>
-                            <textarea id="ncCutoffInput" class="form-control form-control-sm"
-                                      maxlength="200" rows="2"
-                                      placeholder="e.g. NC if marks &lt; 40 and attendance &lt; 75%"
-                                      oninput="updateNCCounter(); schedulePdfPreview(400);"></textarea>
+                            <div class="d-flex gap-2 align-items-start">
+                                <textarea id="ncCutoffInput" class="form-control form-control-sm"
+                                          maxlength="200" rows="2"
+                                          placeholder="e.g. NC if marks &lt; 40 and attendance &lt; 75%"
+                                          oninput="updateNCCounter(); updateApplyNcBtn();"></textarea>
+                                <!-- The PDF uses the text only once applied (no refresh on every key) -->
+                                <button type="button" id="applyNcBtn" class="btn btn-primary btn-sm text-nowrap"
+                                        onclick="applyNcText();" disabled>Apply NC text</button>
+                            </div>
                             <small id="ncCounter" class="text-muted">200 characters remaining</small>
                         </div>
                         <div class="pdf-actions">
@@ -1632,6 +1637,8 @@
     let pdfPreviewUrl   = null;
     let pdfPreviewTimer = null;
     let pdfPreviewToken = 0;      // latest preview request (older ones are skipped)
+    let pdfAppliedText  = '';     // NC criterion in the preview and the saved PDF (Apply NC text)
+    const applyNcBtn    = document.getElementById('applyNcBtn');
     let pdfLoadingTimer = null;
     pdfPreview.addEventListener('load', () => showPdfLoading(false));
 
@@ -1652,7 +1659,9 @@
     function openPdfModal() {
         document.getElementById('pdfDesignBubbles').checked = true;
         ncCutoffInput.value = ncAppliedRule;
+        pdfAppliedText      = ncAppliedRule;
         updateNCCounter();
+        updateApplyNcBtn();
         bootstrap.Modal.getOrCreateInstance(pdfModal).show();
         renderPdfPreview();
     }
@@ -1664,7 +1673,20 @@
             remaining + ' character' + (remaining === 1 ? '' : 's') + ' remaining';
     }
 
-    /** Rebuild the preview after delay ms (typing waits a little, a design change does not). */
+    /** Apply NC text: enabled only for non-empty text that differs from what the PDF shows. */
+    function updateApplyNcBtn() {
+        const text = ncCutoffInput.value.trim();
+        applyNcBtn.disabled = text === '' || text === pdfAppliedText.trim();
+    }
+
+    /** Put the typed NC criterion into the PDF and rebuild the preview. */
+    function applyNcText() {
+        pdfAppliedText = ncCutoffInput.value;
+        updateApplyNcBtn();
+        schedulePdfPreview(0);
+    }
+
+    /** Rebuild the preview after delay ms. */
     function schedulePdfPreview(delay) {
         clearTimeout(pdfPreviewTimer);
         pdfPreviewTimer = setTimeout(renderPdfPreview, delay);
@@ -1719,10 +1741,10 @@
                 'so only the chart and the NC criterion are previewed here. The saved PDF also has the title, ' +
                 'statistics and grade tables.</p>' +
                 `<img src="${renderPdfChart(pdfDesign())}" style="max-width:100%;max-height:70vh">` +
-                `<p style="margin:6px 0 0">${escapeHtml(pdfText(ncCutoffInput.value.trim()))}</p></div></body>`;
+                `<p style="margin:6px 0 0">${escapeHtml(pdfText(pdfAppliedText.trim()))}</p></div></body>`;
             return;
         }
-        const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
+        const doc = buildGradesPdf(pdfDesign(), pdfAppliedText);
         if (!doc) {
             showPdfLoading(false);
             pdfPreview.srcdoc = '<p style="font:16px sans-serif;color:#fff;padding:1rem">The PDF library could not ' +
@@ -1739,7 +1761,7 @@
     function savePdf() {
         showPdfLoading(true);
         afterPaint(() => {
-            const doc = buildGradesPdf(pdfDesign(), ncCutoffInput.value);
+            const doc = buildGradesPdf(pdfDesign(), pdfAppliedText);
             showPdfLoading(false);
             if (!doc) return;
             doc.save(subjectCode + '_PDF_saved_' + saveStamp() + '.pdf');
