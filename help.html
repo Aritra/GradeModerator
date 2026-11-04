@@ -105,8 +105,8 @@
         <li>Enter the <b>subject name</b> and the <b>maximum marks</b> of the course.</li>
         <li>Copy two columns from your spreadsheet, <b>Student ID</b> and <b>Marks</b>, and paste
             them into the paste box.</li>
-        <li>Choose the <b>starting row</b>: the first row that contains a student (2 if you copied one
-            header row, 1 if you copied no header).</li>
+        <li>Check the <b>starting row</b>: the first row that contains a student (2 if you copied one
+            header row, 1 if you copied no header). It is chosen automatically; change it if it is wrong.</li>
         <li>Choose and submit the <b>ERP CSV file</b> exactly as downloaded from ERP (do not rename it).</li>
         <li>Click <b>Show Histogram</b>. If students in the ERP file are missing from your marks, enter their
             marks when asked. If some students have non-letter grades, a list of them is shown next; click OK.</li>
@@ -186,8 +186,13 @@
             “Student ID” is left as it is. The status line says how many IDs were converted.</li>
     </ul>
     <h3>Starting row</h3>
-    <p>Pick the row number (as shown in the preview) of the first student. Rows above it are treated
+    <p>The row number (as shown in the preview) of the first student. Rows above it are treated
        as headers and shown in dark blue; the student rows are shown in light yellow.</p>
+    <p>It is <b>set automatically</b> when you paste: the first row whose first cell looks like a student ID
+       (moved up over rows just above it that have digits in the ID cell and a number for marks, so a first student
+       with a mistyped ID is included and then shown in red by the ID check). The status line says which row was
+       chosen. You can always pick another row in the drop-down, which lists as many rows as needed. If no row looks
+       like a student ID, choose the row yourself.</p>
     <h3>ID format check</h3>
     <p>Once the starting row is chosen, every student ID is checked against the BITS format: a 4-digit year,
        a 4-character programme code, a 4-digit roll number and a campus letter (13 characters, such as

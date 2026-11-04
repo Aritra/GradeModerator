@@ -210,6 +210,7 @@
             csvDESFile.value   = '';
             subjectName.classList.remove('border-danger');
             subjectMarks.classList.remove('border-danger');
+            setStartRowOptions(4);
             startChooser.selectedIndex = 0;
 
             chosenStartRow  = -1;
@@ -393,7 +394,41 @@
             const roundedMsg = (roundedCount > 0
                 ? ` ${roundedCount} decimal mark(s) rounded up to whole numbers.` : '')
                 + (capsCount > 0 ? ` ${capsCount} ID(s) converted to capital letters.` : '');
-            document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, 2 columns. First column = ID, second column = Marks.${roundedMsg} Choose starting row.`;
+
+            // Pick the starting row automatically (the user can still change it)
+            const firstStudent = detectStartRow(csvSRCtxt);
+            setStartRowOptions(Math.min(rowCount, Math.max(4, firstStudent + 1)));
+            if (firstStudent < 0) {
+                document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, 2 columns. First column = ID, second column = Marks.${roundedMsg} Choose starting row.`;
+                return;
+            }
+            document.getElementById("demo").innerHTML = `✅ Pasted ${rowCount} rows, 2 columns. First column = ID, second column = Marks.${roundedMsg}` +
+                `<br>🔎 Starting row found automatically: row ${firstStudent + 1}, the first row with a student ID. Change it below if needed.`;
+            startChooser.selectedIndex = firstStudent + 1;   // option 0 is the hidden placeholder
+            chooseStartRow();
+        }
+
+        /**
+         * Index of the first student row in the pasted data, or -1 (no row has an ID,
+         * so the user chooses). It is the first row whose first cell looks like a
+         * student ID (ID_SHAPE_RE), moved up over rows just above it that also look like
+         * students with a mistyped ID: digits in the ID cell and numeric marks. Header
+         * rows ("Student ID | Marks", "Section | 1") have no digits in the first cell.
+         */
+        function detectStartRow(rows) {
+            const cell = (row, c) => (row[c] || '').trim();
+            let first = rows.findIndex(row => ID_SHAPE_RE.test(cell(row, 0)));
+            if (first < 0) return -1;
+            const looksLikeStudent = row => /\d/.test(cell(row, 0)) &&
+                                            cell(row, 1) !== '' && !isNaN(Number(cell(row, 1)));
+            while (first > 0 && looksLikeStudent(rows[first - 1])) first--;
+            return first;
+        }
+
+        /** Fill the "Starting Row number" drop-down with rows 1..count (after the placeholder). */
+        function setStartRowOptions(count) {
+            while (startChooser.options.length > 1) startChooser.remove(1);
+            for (let r = 1; r <= count; r++) startChooser.add(new Option(String(r)));
         }
 
         /**
