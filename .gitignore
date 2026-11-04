@@ -5,3 +5,6 @@ sample_marks_files/CS_F213_marks.csv
 
 # Editor lock files (LibreOffice / OpenOffice)
 .~lock.*#
+
+# Real ERP files shared for analysis (real student data, never commit)
+for_claude_to_read/
