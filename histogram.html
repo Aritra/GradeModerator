@@ -2171,7 +2171,7 @@
     attachGradeTip(nonLetterTable, nonLetterTipHtml);
 
     // ── Histogram column popup ────────────────────────────────────────────────────
-    // Hovering a mark's column (anywhere in it, so 1-student bars are easy to hit)
+    // Hovering a bar (the pointer inside its red rectangle; no bar, no popup)
     // shows the shared popup: the mark, its current grade, and the students with it
     // (first TIP_MAX_STUDENTS). With more students, a click (or a second tap on a
     // touch screen) opens #barListModal with all of them. A tap shows the popup
@@ -2180,7 +2180,7 @@
     let barTipIdx      = -1;     // column whose popup is shown (-1: none)
     let lastPointer    = 'mouse';
 
-    /** Histogram column (bar index) under the pointer, or -1 outside the plot / no chart. */
+    /** Bar index under the pointer: only inside a bar's rectangle; -1 elsewhere (or no chart). */
     function histColumnAt(evt) {
         if (!mainChart || xvalues.length === 0) return -1;
         // pointer -> chart px through #gradeBubbleArea, laid out like the canvas content box
@@ -2188,11 +2188,15 @@
         const x = (evt.clientX - area.left) / area.width  * mainChart.width;
         const y = (evt.clientY - area.top)  / area.height * mainChart.height;
         const ca = mainChart.chartArea;
-        if (x < ca.left || x > ca.right || y < ca.top || y > mainChart.scales['x-axis-0'].bottom) return -1;
+        if (x < ca.left || x > ca.right || y < ca.top || y > ca.bottom) return -1;
         const data = mainChart.getDatasetMeta(0).data;
         const slot = data.length > 1 ? data[1]._model.x - data[0]._model.x : 1;
-        const i = Math.round((x - data[0]._model.x) / slot);
-        return Math.max(0, Math.min(data.length - 1, i));
+        const i = Math.max(0, Math.min(data.length - 1, Math.round((x - data[0]._model.x) / slot)));
+        // Inside the bar itself: between its edges and from its top down to its base
+        // (an empty mark has a zero-height bar, so never matches)
+        const m = data[i]._model;
+        const inside = Math.abs(x - m.x) <= m.width / 2 && y >= m.y && y <= m.base && m.base > m.y;
+        return inside ? i : -1;
     }
 
     /** Students at column i as [id, name] (stored as "ID : Name"). */
