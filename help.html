@@ -404,8 +404,8 @@
        line, with a dashed red line at its edge. The shading follows the data as you work and is included in
        the PDF (<b>Save PDF</b>). Turn the switch off to remove it.</p>
     <ul>
-        <li>The calculation uses the students in the histogram plus anyone already given NC (so giving NC in
-            Search/Edit Grades does not move the line); W and the other non-letter grades are left out.</li>
+        <li>The calculation uses only the letter-graded students in the histogram: anyone with W, NC or another
+            non-letter grade (from ERP, Search/Edit Grades or the red ✕) is left out.</li>
         <li>The calculator itself does not change any grade. To give NC, use the red ✕ button (below) or
             <a href="#search-edit">Search/Edit Grades</a>.</li>
         <li>The chosen rule, both percentages, K and the switch are kept when you refresh the page and are saved in the
@@ -428,6 +428,12 @@
     </ol>
     <p>The rule used is remembered and filled in as the NC criterion when you click <b>Save PDF</b>.</p>
     <p>If no letter-graded student is below the line, the dialog says so and <b>Yes</b> is disabled.</p>
+    <p class="warning"><b>The red ✕ can be used only once.</b> After it, the NC line would be worked out again from the
+       students who are left and would give NC to more students, so a second attempt is refused with: “NC calculation and
+       filtering has already been performed. In case you want to re-calculate NC and try again, please load the auto
+       backup file before that or start again.” This is remembered when you refresh and in the Save Grades file. The
+       automatic backup was saved before the filtering, so opening it with View Grades lets you try again. Giving NC or
+       other non-letter grades by hand in Search/Edit Grades is not limited.</p>
 </section>
 
 <section class="help-section" id="search-edit">
@@ -444,7 +450,10 @@
     </ol>
     <p>The students are removed from the histogram and all tables, counts, the MGPV and the average are
        refreshed. <b>Their marks are kept</b> (they are written to the ERP file and the saved JSON).
-       <b>Cutoffs and the x-axis do not move.</b></p>
+       The histogram is then <b>redrawn from the new lowest letter-graded mark</b> (minus 5, as when the page opens):
+       a grade cutoff that would now be left of the start moves to the first mark of the chart, and the cutoffs above it
+       are nudged up only if needed to stay in order (e.g. C- becomes E + 1); cutoffs further right do not move. You can
+       change grades here as many times as you like.</p>
     <p class="note"><b>Automatic backup:</b> when you confirm, the grades as they were <i>before</i> the
        changes are first downloaded as a JSON file named <code>AUTO_BACKUP_</code> followed by the usual
        Save Grades file name (for example <code>AUTO_BACKUP_CS F213_JSON_saved_3-11-2026-14-5-2.json</code>).

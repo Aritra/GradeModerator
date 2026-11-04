@@ -746,8 +746,8 @@
                         <label class="form-check-label" for="ncZoneSwitch">Shade the NC zone on the histogram
                             (light red, left of the NC line)</label>
                     </div>
-                    <p class="text-muted small mt-2 mb-0">Calculated over the students in the histogram plus any
-                       already given NC; W and other non-letter grades are left out.</p>
+                    <p class="text-muted small mt-2 mb-0">Calculated over the letter-graded students in the histogram
+                       only; students with W, NC or any other non-letter grade are left out.</p>
                 </div>
             </div>
         </div>
@@ -868,6 +868,9 @@
     // The NC rule last applied with the red X button, as one sentence (saved as
     // ncAppliedRule); prefills the NC criterion box of Save PDF
     let ncAppliedRule      = '';
+    // True once the red X has given NC to the NC zone (saved as ncFilterDone): it
+    // may be done only once per grading (Search/Edit Grades has no such limit)
+    let ncFilterDone       = false;
     let ncSettings         = { rule: 'median', medPct: 40, k: 3, pct: 30, show: false };
 
     let markLowest         = 10000;
@@ -1284,8 +1287,10 @@
     /**
      * Move every pending student from markMap to spGMap ([id, code, name, marks],
      * marks kept for the ERP export and the saved JSON), remove them from their
-     * histogram bar, then refresh the counts, MGPV, averages, tables and chart.
-     * gCutOffs and the histogram range (markLowest..markHighest) are not changed.
+     * histogram bar, then refresh the counts, MGPV, averages and tables, and redraw
+     * the histogram from the new lowest letter-graded mark (resetHistogramMinimum:
+     * cutoffs left of the new start are moved up). Used by Search/Edit Grades (any
+     * number of times) and the red X (once).
      */
     function applyNonLetterGrades(changes = pendingSpecial) {   // Map id -> non-letter grade
         for (const [id, code] of changes) {
@@ -1314,7 +1319,7 @@
         TFAvgMarks.innerHTML = avgMarks.toFixed(2);
 
         updateNonLetterCounts();
-        updateAfterCutoffChange();   // grade counts, MGPV, Students Graded, chart (yvalues updated in place)
+        resetHistogramMinimum();     // new x range, cutoffs, grade counts, MGPV, Students Graded, chart
     }
 
     // =============================================================================
@@ -1563,7 +1568,8 @@
             retCSVName:  desFileName,
             histRange:   [markLowest, markHighest],
             ncZone:      ncSettings,
-            ncAppliedRule: ncAppliedRule
+            ncAppliedRule: ncAppliedRule,
+            ncFilterDone:  ncFilterDone
         };
     }
 
@@ -2327,9 +2333,8 @@
     // Two rules for the NC line: a percentage of the median marks (40 to start
     // with), or a percentage (30 to start with) of the average of the top K
     // students; both percentages and K are editable. Students with marks below the line are NC candidates.
-    // The marks used are the letter-graded students plus those already given NC
-    // (so awarding NC in Search/Edit Grades does not move the line); W and the
-    // other non-letter grades are left out. Optionally the part of the histogram
+    // The marks used are those of the letter-graded students only (non-letter
+    // grades, NC included, are left out). Optionally the part of the histogram
     // left of the line is shaded light red (drawNCZone, via the chart plugin).
     // =============================================================================
     const ncCalcModal  = document.getElementById('ncCalcModal');
@@ -2346,13 +2351,13 @@
         return String(Math.round(x * 100) / 100);
     }
 
-    /** Marks the NC rules are calculated over, ascending. */
+    /**
+     * Marks the NC rules are calculated over, ascending: the letter-graded students
+     * in the histogram only. Anyone with a non-letter grade (W, NC, I, ...: from ERP,
+     * Search/Edit Grades or the red X) is left out.
+     */
     function ncClassMarks() {
-        const marks = markMap.map(e => Number(e[1]));
-        spGMap.forEach(e => {
-            if (e[1] === 'NC' && e[3] !== '' && Number.isFinite(Number(e[3]))) marks.push(Number(e[3]));
-        });
-        return marks.sort((a, b) => a - b);
+        return markMap.map(e => Number(e[1])).sort((a, b) => a - b);
     }
 
     /**
@@ -2473,6 +2478,11 @@
 
     /** Red cross button: ask before giving NC to everyone in the NC zone. */
     function openNCApply() {
+        if (ncFilterDone) {
+            alert('NC calculation and filtering has already been performed. In case you want to re-calculate NC ' +
+                  'and try again, please load the auto backup file before that or start again.');
+            return;
+        }
         const line = ncLine();
         const students = line.error ? [] : ncZoneStudents(line);
         if (line.error) {
@@ -2508,8 +2518,10 @@
         // Remembered after the backup (which holds the state before this change);
         // Save PDF prefills its NC criterion box with it
         ncAppliedRule = `NC if marks < ${fmtMarks(line.value)}, i.e. ${line.rule}`.slice(0, 200);
+        // Recorded so it cannot be done twice (the median of the students left would
+        // give a new, higher line); the backup above does not have it
+        ncFilterDone  = true;
         applyNonLetterGrades(changes);
-        resetHistogramMinimum();
     }
 
     /**
@@ -2519,7 +2531,7 @@
      * to stay inside the range and in order.
      */
     function resetHistogramMinimum() {
-        if (markMap.length === 0) return;
+        if (markMap.length === 0) { updateAfterCutoffChange(); return; }   // nobody left: keep the range
         markLowest = Math.max(0, Math.min(...markMap.map(e => e[1])) - 5);
         let prev = markLowest - 1;
         for (let g = 0; g < 8; g++) {
@@ -2653,6 +2665,7 @@
         gCutOffs     = gradesDetails.gCutOffs;
         desFileName  = erpFiles[0].name;
         if (gradesDetails.ncZone) ncSettings = Object.assign(ncSettings, gradesDetails.ncZone);
+        ncFilterDone = gradesDetails.ncFilterDone === true;
         if (typeof gradesDetails.ncAppliedRule === 'string') ncAppliedRule = gradesDetails.ncAppliedRule;
 
         document.title          = subjectCode + "_histogram";
