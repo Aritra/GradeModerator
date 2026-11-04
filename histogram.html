@@ -717,6 +717,10 @@
                             data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Shown (and the controls disabled) once the red X has given NC by cutoff -->
+                    <div id="ncDoneNotice" class="alert alert-danger py-2 small fw-bold" hidden>
+                        NC calculation and filtering has already been performed. In case you want to re-calculate NC and try again, please load the auto backup file before that or start again.
+                    </div>
                     <p class="mb-2">Students with marks <b>below</b> the NC line may be awarded NC.
                        Choose the rule for the NC line:</p>
                     <div class="form-check">
@@ -740,7 +744,7 @@
                         <label class="form-check-label" for="ncRuleTopK">students (K)</label>
                     </div>
                     <div id="ncCalcResult" class="nc-result"></div>
-                    <div class="form-check form-switch mt-3">
+                    <div class="form-check form-switch mt-3" id="ncZoneSwitchRow">
                         <input class="form-check-input" type="checkbox" role="switch" id="ncZoneSwitch"
                                onchange="onNCCalcChange();">
                         <label class="form-check-label" for="ncZoneSwitch">Shade the NC zone on the histogram
@@ -871,6 +875,9 @@
     // True once the red X has given NC to the NC zone (saved as ncFilterDone): it
     // may be done only once per grading (Search/Edit Grades has no such limit)
     let ncFilterDone       = false;
+    // What the red X applied (saved as ncFilterInfo), shown frozen in the NC Calculator
+    // afterwards: { value, explain, settings, students: [[id, name, marks], ...] }
+    let ncFilterInfo       = null;
     let ncSettings         = { rule: 'median', medPct: 40, k: 3, pct: 30, show: false };
 
     let markLowest         = 10000;
@@ -1569,7 +1576,8 @@
             histRange:   [markLowest, markHighest],
             ncZone:      ncSettings,
             ncAppliedRule: ncAppliedRule,
-            ncFilterDone:  ncFilterDone
+            ncFilterDone:  ncFilterDone,
+            ncFilterInfo:  ncFilterInfo
         };
     }
 
@@ -2386,6 +2394,23 @@
                  rule:    `${fmtMarks(medPct)}% of the median marks (${fmtMarks(med)})` };
     }
 
+    /** Result box after the red X: the line that was applied and who was given NC (no recalculation). */
+    function renderNCFrozenResult() {
+        if (!ncFilterInfo) {   // saved before this was recorded: only the rule text is known
+            ncCalcResult.innerHTML = ncAppliedRule ? `<div>Applied: ${escapeHtml(ncAppliedRule)}</div>` : '';
+            return;
+        }
+        const st   = ncFilterInfo.students;
+        const rows = st.slice(0, TIP_MAX_STUDENTS).map(r =>
+            `<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td><td>${r[2]}</td><td>NC</td></tr>`).join('');
+        ncCalcResult.innerHTML =
+            `<div>${escapeHtml(ncFilterInfo.explain)}:</div>` +
+            `<div class="nc-line">NC line applied = ${fmtMarks(ncFilterInfo.value)} marks</div>` +
+            `<div>Given NC: <b>${st.length}</b> student(s)</div>` +
+            (st.length ? `<div class="nc-list"><table><tr><th>ID</th><th>Name</th><th>Marks</th><th>Grade now</th></tr>${rows}</table>` +
+                         (st.length > TIP_MAX_STUDENTS ? `… and ${st.length - TIP_MAX_STUDENTS} more` : '') + `</div>` : '');
+    }
+
     /** Fill the result box: the NC line and the students below it. */
     function renderNCResult() {
         const line = ncLine();
@@ -2413,13 +2438,20 @@
 
     /** Open the NC Calculator with the current settings. */
     function openNCCalc() {
-        ncRuleMedian.checked = ncSettings.rule !== 'topk';
-        ncRuleTopK.checked   = ncSettings.rule === 'topk';
-        ncTopK.value         = ncSettings.k;
-        ncTopPct.value       = ncSettings.pct;
-        ncMedPct.value       = ncSettings.medPct;
+        // After the red X: read-only, showing the settings and line that were applied
+        const done = ncFilterDone;
+        const set  = (done && ncFilterInfo) ? ncFilterInfo.settings : ncSettings;
+        ncRuleMedian.checked = set.rule !== 'topk';
+        ncRuleTopK.checked   = set.rule === 'topk';
+        ncTopK.value         = set.k;
+        ncTopPct.value       = set.pct;
+        ncMedPct.value       = set.medPct;
         ncZoneSwitch.checked = ncSettings.show;
-        renderNCResult();
+        document.getElementById('ncDoneNotice').hidden    = !done;
+        document.getElementById('ncZoneSwitchRow').hidden = done;
+        [ncRuleMedian, ncRuleTopK, ncTopK, ncTopPct, ncMedPct].forEach(el => { el.disabled = done; });
+        if (done) renderNCFrozenResult();
+        else      renderNCResult();
         bootstrap.Modal.getOrCreateInstance(ncCalcModal).show();
     }
 
@@ -2444,7 +2476,7 @@
      * for the first mark at or above the line.
      */
     function drawNCZone(chart) {
-        if (!ncSettings.show) return;
+        if (!ncSettings.show || ncFilterDone) return;
         const line = ncLine();
         if (line.error) return;
         const idx = Math.ceil(line.value) - markLowest;      // first bar outside the zone
@@ -2479,8 +2511,7 @@
     /** Red cross button: ask before giving NC to everyone in the NC zone. */
     function openNCApply() {
         if (ncFilterDone) {
-            alert('NC calculation and filtering has already been performed. In case you want to re-calculate NC ' +
-                  'and try again, please load the auto backup file before that or start again.');
+            alert(document.getElementById('ncDoneNotice').textContent.trim());
             return;
         }
         const line = ncLine();
@@ -2521,6 +2552,9 @@
         // Recorded so it cannot be done twice (the median of the students left would
         // give a new, higher line); the backup above does not have it
         ncFilterDone  = true;
+        ncFilterInfo  = { value: line.value, explain: line.explain, settings: Object.assign({}, ncSettings),
+                          students: ncZoneStudents(line).map(e => [e[0], e[2], Number(e[1])]) };
+        ncSettings.show = false;   // the shading switch is gone after filtering
         applyNonLetterGrades(changes);
     }
 
@@ -2666,6 +2700,7 @@
         desFileName  = erpFiles[0].name;
         if (gradesDetails.ncZone) ncSettings = Object.assign(ncSettings, gradesDetails.ncZone);
         ncFilterDone = gradesDetails.ncFilterDone === true;
+        ncFilterInfo = gradesDetails.ncFilterInfo || null;
         if (typeof gradesDetails.ncAppliedRule === 'string') ncAppliedRule = gradesDetails.ncAppliedRule;
 
         document.title          = subjectCode + "_histogram";
