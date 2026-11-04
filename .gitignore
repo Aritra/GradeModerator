@@ -8,3 +8,6 @@ sample_marks_files/CS_F213_marks.csv
 
 # Real ERP files shared for analysis (real student data, never commit)
 for_claude_to_read/
+
+# Real ERP files with marks/grades removed, for manual testing (still real student data)
+clean_test/
